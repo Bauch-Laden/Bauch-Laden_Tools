@@ -159,7 +159,7 @@ header {
 <header>
   <div class="logo">📦</div>
   <div class="header-text">
-    <h1>Bauch-Laden Bestandsaufnahme <span class="version">v3.2</span></h1>
+    <h1>Bauch-Laden Bestandsaufnahme <span class="version">v3.3</span></h1>
     <p id="last-sync">Noch nicht synchronisiert</p>
   </div>
   <div class="header-right">
@@ -184,6 +184,9 @@ header {
   </button>
   <button class="tab-btn" onclick="switchTab('back')" id="tab-back">
     <span class="tab-icon">🏠</span> Back-Kitchen
+  </button>
+  <button class="tab-btn" onclick="switchTab('bf')" id="tab-bf">
+    <span class="tab-icon">🔥</span> B&amp;F
   </button>
 </div>
 
@@ -331,6 +334,58 @@ const BACK_NAMES = [
 function buildBackData(names) {
   return names.map(name => ({ name, pack: '', menge: '' }));
 }
+
+let bfData = [];
+const BF_ITEMS = [
+  ["Ketchup Flasche","Flasche Stück"],
+  ["Mayo Flasche","Flasche Stück"],
+  ["Bautzner Senf Flasche","Flasche Stück"],
+  ["Portion Senf Box","Karton x 200 Stück"],
+  ["Portion Süßsenf","Karton x 200 Stück"],
+  ["Pommes Gewürz","Beutel"],
+  ["Einweg Handschuhe","Packung x 100 Stück"],
+  ["Pommes Gabel","Boxen mit 1000 Stück"],
+  ["Pappschale (Pommes)","Packung mit 250 Stück"],
+  ["Pappschale (Wedges + Curry Wurst)","Packung mit 250 Stück"],
+  ["Rapsöl (Grill)","Kanister mit 10 Lt"],
+  ["Frittieröl (Friteuse)","Kanister mit 10 Lt"],
+  ["Kräuterquark","5 kg Eimer Stück"],
+  ["Palmblätter für BL und Weißwurst","Packung mit 25 Stück"],
+  ["Currysauce","6kg Eimer Stück"],
+  ["Curry Pulver","900 gr Beutel"],
+  ["Fleisch Hähnchenbrust Filet","Beutel je 2 Kg 1,7kg mit 10 Stück"],
+  ["Fleisch Weißwurst Münchner Art","Beutel je 2 Kg 1,7kg mit 10 Stück"],
+  ["Fleisch Schweinesteak","Beutel je 2 Kg 1,8kg mit 10 Stück"],
+  ["Fleisch Kinder Hotdog - Saiten","Beutel je 0,8 Kg mit 20 Stück"],
+  ["Fleisch Feuerwurst","Beutel je 2,1 Kg mit 20 Stück"],
+  ["Fleisch Thüringer Bratwurst","Beutel je 2 Kg 1,7kg mit 20 Stück"],
+  ["Fleisch Rote","Beutel je 1,1 Kg mit 10 Stück"],
+  ["Fleisch Oberländer","Beutel je 1,1 Kg mit 10 Stück"],
+  ["Servietten","Stück Serviette"],
+  ["Petersilie oä für Weißwurst","Bund"],
+  ["Salz","Karton 500 gr"],
+  ["Hände-Desinfektion","Flasche Stück"],
+  ["Fettlöser","Flasche Stück"],
+  ["Frische Pommes","Karton mit 10 Kg"],
+  ["TK Wedges (gewürzt) LAMB WESTON","Karton mit 10 Kg"],
+  ["Hotdog Papier","Stück"],
+  ["Brötchen Normal","Stück"],
+  ["Brötchen HotDog","Stück"],
+  ["Brezel für Weißwurst","Stück"],
+  ["1€ Münze","Rolle Stück"],
+  ["2€ Münze","Rolle Stück"],
+  ["Tork Handtücher","Packung mit 100 Stück"],
+  ["Gasflasche Angeschlossen","Stück"],
+  ["Gasflasche Stock","Stück"],
+  ["Zewa für Tony (Groß)","Große Rolle Stück"],
+  ["Zewa für Nathan (Klein)","Kleine Rolle Stück"],
+  ["Alu Folie","Stück"],
+  ["Mitarbeiter Wasser mit","Flasche Stück"],
+  ["Mitarbeiter Wasser ohne","Flasche Stück"]
+];
+function buildBfData() {
+  return BF_ITEMS.map(([name, pack]) => ({ name, pack, menge: '' }));
+}
 let lagerData = JSON.parse(JSON.stringify(LAGER_DEFAULT));
 let tokenClient = null;
 let accessToken = null;
@@ -375,6 +430,7 @@ async function loadBothTabs() {
   await loadTab('lager');
   await loadTab('truck');
   await loadTab('back');
+  await loadTab('bf');
   updateLastSync();
   dataLoaded = true;
   render();
@@ -383,7 +439,7 @@ async function loadBothTabs() {
 
 async function loadTab(tab) {
   try {
-    const sheetName = tab === 'truck' ? 'Food-Truck' : (tab === 'back' ? 'Back-Kitchen' : 'Lager');
+    const sheetName = tab === 'truck' ? 'Food-Truck' : (tab === 'back' ? 'Back-Kitchen' : (tab === 'bf' ? 'B&F' : 'Lager'));
     const cols = tab === 'lager' ? 'A2:G500' : 'A2:D500';
     const resp = await fetch(
       `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(sheetName)}!${cols}`,
@@ -392,12 +448,14 @@ async function loadTab(tab) {
     const data = await resp.json();
     if (data.values && data.values.length) {
       // Sheet has data — load from sheet, deduplicate by name
-      if (tab === 'truck' || tab === 'back') {
+      if (tab === 'truck' || tab === 'back' || tab === 'bf') {
         const seen = new Set();
         const parsed = data.values
           .map(r => ({ name:r[0]||'', pack:r[1]||'', menge:r[2]||'', archived: r[3]==='ja' }))
           .filter(r => { if (!r.name || seen.has(r.name)) return false; seen.add(r.name); return true; });
-        if (tab === 'truck') truckData = parsed; else backData = parsed;
+        if (tab === 'truck') truckData = parsed;
+        else if (tab === 'back') backData = parsed;
+        else bfData = parsed;
       } else {
         const seen = new Set();
         lagerData = data.values
@@ -408,6 +466,7 @@ async function loadTab(tab) {
       // Sheet empty — initialize with defaults (only once)
       if (tab === 'truck') truckData = buildTruckData(TRUCK_NAMES);
       if (tab === 'back') { backData = buildBackData(BACK_NAMES); await ensureSheet('Back-Kitchen'); }
+      if (tab === 'bf') { bfData = buildBfData(); await ensureSheet('B&F'); }
       await initSheet(tab);
     }
   } catch(e) { showToast('❌ Fehler beim Laden'); }
@@ -424,12 +483,14 @@ async function ensureSheet(title) {
 }
 
 async function initSheet(tab) {
-  const sheetName = tab === 'truck' ? 'Food-Truck' : (tab === 'back' ? 'Back-Kitchen' : 'Lager');
+  const sheetName = tab === 'truck' ? 'Food-Truck' : (tab === 'back' ? 'Back-Kitchen' : (tab === 'bf' ? 'B&F' : 'Lager'));
   let values;
   if (tab === 'truck') {
     values = [['Zutat','Verpackung','Menge','Archiviert'], ...truckData.map(r=>[r.name,r.pack||'',r.menge||'',r.archived?'ja':''])];
   } else if (tab === 'back') {
     values = [['Zutat','Verpackung','Menge','Archiviert'], ...backData.map(r=>[r.name,r.pack||'',r.menge||'',r.archived?'ja':''])];
+  } else if (tab === 'bf') {
+    values = [['Zutat','Verpackung','Menge','Archiviert'], ...bfData.map(r=>[r.name,r.pack||'',r.menge||'',r.archived?'ja':''])];
   } else {
     values = [['Zutat','Vendor','Verpackung','Menge','Eisenmenge','Archiviert'], ...lagerData.map(r=>[r.name,r.vendor||'',r.pack||'',r.menge||'',r.eisen||'',r.archived?'ja':''])];
   }
@@ -446,6 +507,7 @@ async function saveToSheets(silent = false) {
     const sortedTruck = [...truckData].sort((a,b) => a.name.localeCompare(b.name, 'de'));
     const sortedLager = [...lagerData].sort((a,b) => a.name.localeCompare(b.name, 'de'));
     const sortedBack = [...backData].sort((a,b) => a.name.localeCompare(b.name, 'de'));
+    const sortedBf = [...bfData].sort((a,b) => a.name.localeCompare(b.name, 'de'));
     const truckValues = [
       ['Zutat','Verpackung','Menge','Archiviert'],
       ...sortedTruck.map(r=>[r.name,r.pack||'',r.menge||'',r.archived?'ja':''])
@@ -458,10 +520,15 @@ async function saveToSheets(silent = false) {
       ['Zutat','Verpackung','Menge','Archiviert'],
       ...sortedBack.map(r=>[r.name,r.pack||'',r.menge||'',r.archived?'ja':''])
     ];
+    const bfValues = [
+      ['Zutat','Verpackung','Menge','Archiviert'],
+      ...sortedBf.map(r=>[r.name,r.pack||'',r.menge||'',r.archived?'ja':''])
+    ];
     await Promise.all([
       writeSheet('Food-Truck', truckValues),
       writeSheet('Lager', lagerValues),
-      writeSheet('Back-Kitchen', backValues)
+      writeSheet('Back-Kitchen', backValues),
+      writeSheet('B&F', bfValues)
     ]);
     if (!silent) showToast('✓ Gespeichert');
     updateLastSync();
@@ -488,6 +555,7 @@ function switchTab(tab) {
   document.getElementById('tab-truck').classList.toggle('active', tab==='truck');
   document.getElementById('tab-lager').classList.toggle('active', tab==='lager');
   document.getElementById('tab-back').classList.toggle('active', tab==='back');
+  document.getElementById('tab-bf').classList.toggle('active', tab==='bf');
   render();
 }
 
@@ -635,7 +703,7 @@ function archiveRow() {
 }
 
 function restoreRow(tab, name) {
-  const data = tab === 'truck' ? truckData : (tab === 'back' ? backData : lagerData);
+  const data = tab === 'truck' ? truckData : (tab === 'back' ? backData : (tab === 'bf' ? bfData : lagerData));
   const row = data.find(r => r.name === name);
   if (!row) return;
   row.archived = false;
@@ -696,7 +764,7 @@ function renderArchive() {
   }).join('');
 }
 
-function getData() { return currentTab === 'truck' ? truckData : (currentTab === 'back' ? backData : lagerData); }
+function getData() { return currentTab === 'truck' ? truckData : (currentTab === 'back' ? backData : (currentTab === 'bf' ? bfData : lagerData)); }
 function isLow(row) {
   if (!row.menge || !row.eisen) return false;
   const m = parseFloat(row.menge.replace(',','.')), e = parseFloat(row.eisen.replace(',','.'));
@@ -799,6 +867,7 @@ function scheduleAutosave() {
 // Init
 truckData = buildTruckData(TRUCK_NAMES);
 backData = buildBackData(BACK_NAMES);
+bfData = buildBfData();
 render();
 
 const gsi = document.createElement('script');
