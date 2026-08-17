@@ -1,73 +1,2259 @@
 <!DOCTYPE html>
-<html lang="de">
-<head>
-<meta charset="UTF-8">
+<!-- saved from url=(0049)https://bauch-laden.github.io/einkauf-kalkulator/ -->
+<html lang="de"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Bauch-Laden – Tools</title>
+<title>Bauch-Laden Portionskalkulator</title>
 <style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap');
+
   :root {
     --orange: #FF9A00;
-    --flame: #FF6700;
-    --dark: #2B2620;
-    --cream: #FBF7F0;
-    --line: #E8E0D3;
-    --text: #3A342C;
-    --muted: #766F63;
+    --orange-light: #FFF4E0;
+    --orange-dim: #FF9A0022;
+    --bg: #FAFAF8;
+    --surface: #FFFFFF;
+    --border: #E8E6E0;
+    --border-light: #F0EEE8;
+    --text: #1A1A18;
+    --text-muted: #7A7870;
+    --text-subtle: #B0AEA8;
+    --radius: 12px;
+    --radius-sm: 8px;
   }
-  * { box-sizing: border-box; }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
   body {
-    margin: 0;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
     color: var(--text);
-    line-height: 1.5;
+    min-height: 100vh;
+    padding: 0;
   }
-  .wrap { max-width: 560px; margin: 0 auto; padding: 48px 24px 100px; text-align: center; }
-  .eyebrow { color: var(--flame); font-weight: 700; letter-spacing: 0.08em; font-size: 0.8rem; text-transform: uppercase; }
-  h1 { font-size: 1.9rem; margin: 8px 0 8px; color: var(--dark); }
-  .subtitle { color: var(--muted); margin-bottom: 40px; }
 
-  .tile {
-    display: flex; align-items: center; gap: 16px;
-    background: #fff; border: 1px solid var(--line); border-radius: 14px;
-    padding: 22px 24px; margin-bottom: 16px; text-decoration: none; color: inherit;
-    text-align: left; transition: border-color 0.15s, transform 0.15s;
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
   }
-  .tile:hover { border-color: var(--orange); transform: translateY(-2px); }
-  .tile-icon { font-size: 2rem; flex-shrink: 0; }
-  .tile-text { flex: 1; }
-  .tile-title { font-weight: 700; font-size: 1.15rem; color: var(--dark); }
-  .tile-sub { font-size: 0.88rem; color: var(--muted); margin-top: 2px; }
-  .tile-arrow { color: var(--orange); font-size: 1.4rem; flex-shrink: 0; }
 
-  footer { margin-top: 40px; font-size: 0.8rem; color: var(--muted); }
+  .logo {
+    width: 36px;
+    height: 36px;
+    background: var(--orange);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+  }
+
+  .header-text h1 {
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.2;
+  }
+
+  .header-text p {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .main {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 20px 16px 60px;
+  }
+
+  .section-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+    margin-top: 28px;
+  }
+
+  /* Dish grid */
+  .dishes {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 8px;
+  }
+
+  @media (max-width: 480px) {
+    .dishes {
+      grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+      gap: 6px;
+    }
+    .dish-card {
+      padding: 8px;
+    }
+    .dish-card .dish-name {
+      font-size: 12px;
+    }
+    .dish-card .dish-base {
+      font-size: 10px;
+    }
+    .portion-btn {
+      width: 24px;
+      height: 24px;
+      font-size: 14px;
+    }
+    .portion-num {
+      width: 40px;
+      font-size: 12px;
+    }
+  }
+
+  .dish-card {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .dish-card.selected {
+    border-color: var(--orange);
+    background: var(--orange-light);
+  }
+
+  .dish-card .dish-name {
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.3;
+  }
+
+  .dish-card .dish-base {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 3px;
+  }
+
+  .dish-card .portion-input-wrap {
+    margin-top: 10px;
+  }
+
+  .dish-card .portion-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+  }
+
+  .portion-controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .portion-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    border: 1.5px solid var(--border);
+    background: var(--surface);
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text);
+    flex-shrink: 0;
+    -webkit-tap-highlight-color: transparent;
+    line-height: 1;
+  }
+
+  .portion-btn:active { background: var(--border-light); }
+
+  .portion-num {
+    font-family: 'DM Mono', monospace;
+    font-size: 14px;
+    font-weight: 500;
+    width: 52px;
+    text-align: center;
+    color: var(--orange);
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    padding: 3px 6px;
+    background: var(--surface);
+    outline: none;
+  }
+
+  .portion-num:focus {
+    border-color: var(--orange);
+  }
+
+  /* Einkaufsliste */
+  .shop-block {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-bottom: 10px;
+  }
+
+  .shop-name {
+    background: var(--orange);
+    color: white;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 8px 14px;
+  }
+
+  /* .shop-item defined below with tick support */
+
+  .shop-item-name { color: var(--text); flex: 1; }
+
+  .shop-item-qty {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--orange);
+    background: var(--orange-dim);
+    padding: 2px 8px;
+    border-radius: 20px;
+    white-space: nowrap;
+    margin-left: 8px;
+  }
+
+  .empty-state {
+    background: var(--surface);
+    border: 1.5px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 28px 20px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+
+  .empty-icon { font-size: 28px; margin-bottom: 8px; }
+
+  /* Thermomix Hinweis */
+  .thermomix-hint {
+    background: var(--orange-light);
+    border: 1px solid var(--orange);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    font-size: 13px;
+    color: var(--text);
+    margin-top: 10px;
+  }
+
+  /* Lager Checkliste */
+  .checklist-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+
+  .checklist-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    border-bottom: 1px solid var(--border-light);
+  }
+
+  .checklist-header-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .checklist-title {
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .checklist-count {
+    font-size: 11px;
+    color: var(--text-muted);
+    background: var(--border-light);
+    padding: 2px 8px;
+    border-radius: 20px;
+  }
+
+  .chevron {
+    color: var(--text-muted);
+    font-size: 18px;
+    transition: transform 0.2s;
+    line-height: 1;
+  }
+
+  .chevron.open { transform: rotate(180deg); }
+
+  .checklist-items {
+    display: block;
+    padding: 0;
+  }
+
+  .checklist-items.collapsed {
+    display: none;
+  }
+
+  .check-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 14px;
+    border-bottom: 1px solid var(--border-light);
+    cursor: pointer;
+    font-size: 13px;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.1s;
+    background: var(--surface);
+  }
+  .check-item:last-child { border-bottom: none; }
+
+  .check-item.done {
+    background: var(--surface);
+  }
+
+  .check-item.done .check-item-text {
+    text-decoration: line-through;
+    color: var(--text-muted);
+  }
+
+  .checkbox {
+    width: 18px;
+    height: 18px;
+    border-radius: 5px;
+    border: 1.5px solid var(--border);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.1s, border-color 0.1s;
+  }
+
+  .check-item.done .checkbox {
+    background: var(--orange);
+    border-color: var(--orange);
+  }
+
+  .checkmark {
+    display: none;
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  .check-item.done .checkmark { display: block; }
+
+  .reset-row {
+    padding: 10px 14px;
+    border-top: 1px solid var(--border-light);
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .reset-btn {
+    font-size: 12px;
+    color: var(--text-muted);
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 4px 14px;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .reset-btn:active { background: var(--border-light); }
+
+  .dyn-count {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--orange);
+    background: var(--orange-dim);
+    padding: 1px 7px;
+    border-radius: 20px;
+    margin-left: 4px;
+    white-space: nowrap;
+  }
+  .dyn-count--empty {
+    color: var(--text-subtle);
+    background: var(--border-light);
+  }
+
+  /* Share button */
+  .share-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    margin-bottom: 4px;
+  }
+  .share-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--orange);
+    color: white;
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: 9px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .share-btn:active { opacity: 0.85; }
+  .share-toast {
+    display: none;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #2a7a2a;
+    background: #eafaea;
+    border: 1px solid #b2e0b2;
+    border-radius: var(--radius-sm);
+    padding: 9px 14px;
+  }
+  .share-toast.show { display: flex; }
+
+  /* Read-only mode banner */
+  .readonly-banner {
+    background: var(--orange);
+    color: white;
+    padding: 10px 20px;
+    font-size: 13px;
+    font-weight: 500;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    text-align: center;
+  }
+
+  /* Einkaufsliste — zwei Checkboxen */
+  .shop-item {
+    display: flex;
+    align-items: center;
+    padding: 8px 14px;
+    border-bottom: 1px solid var(--border-light);
+    font-size: 13px;
+    gap: 10px;
+  }
+  .shop-item:last-child { border-bottom: none; }
+  .shop-item.status-truck .shop-item-name {
+    text-decoration: line-through;
+    color: var(--text-subtle);
+  }
+  .shop-item.status-truck .shop-item-qty {
+    color: var(--text-subtle);
+    background: var(--border-light);
+  }
+  .shop-item-name { flex: 1; }
+  .item-checks {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  .item-check-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .item-check-label {
+    font-size: 9px;
+    color: var(--text-subtle);
+    text-align: center;
+    line-height: 1.2;
+    max-width: 44px;
+  }
+  .item-check-box {
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    border: 1.5px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.1s, border-color 0.1s;
+    font-size: 12px;
+    color: white;
+    font-weight: 700;
+  }
+  .item-check-box.checked-lager {
+    background: #4a90d9;
+    border-color: #4a90d9;
+  }
+  .item-check-box.checked-truck {
+    background: var(--orange);
+    border-color: var(--orange);
+  }
+
+  .tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 1.5px solid var(--border);
+    margin-bottom: 1.5rem;
+  }
+  .tab-btn {
+    flex: 1;
+    padding: 10px 8px;
+    font-size: 13px;
+    font-weight: 500;
+    font-family: 'DM Sans', sans-serif;
+    background: none;
+    border: none;
+    border-bottom: 2.5px solid transparent;
+    cursor: pointer;
+    color: var(--text-muted);
+    transition: color 0.15s, border-color 0.15s;
+    margin-bottom: -1.5px;
+  }
+  .tab-btn.active {
+    color: var(--orange);
+    border-bottom-color: var(--orange);
+  }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  .gericht-block {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-bottom: 10px;
+  }
+  .gericht-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 14px;
+    background: var(--orange);
+  }
+  .gericht-title { font-size: 14px; font-weight: 600; color: white; }
+  .gericht-badge { font-size: 11px; color: white; opacity: 0.85; }
+  .gericht-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 7px 14px;
+    border-bottom: 1px solid var(--border-light);
+    font-size: 13px;
+  }
+  .gericht-item:last-child { border-bottom: none; }
+  .gericht-item-left .item-shop {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 1px;
+  }
+
+  /* Woanders kaufen */
+  .stock-badge {
+    font-size: 10px;
+    background: var(--red);
+    color: white;
+    border-radius: 20px;
+    padding: 1px 7px;
+    margin-left: 6px;
+    white-space: nowrap;
+  }
+  .shop-item.stock-low { background: #fdecea; }
+
+  .redirect-badge {
+    font-size: 10px;
+    color: #c47000;
+    background: #FFF0CC;
+    border: 1px solid #FFD580;
+    border-radius: 20px;
+    padding: 1px 7px;
+    margin-left: 6px;
+    white-space: nowrap;
+  }
+  .redirect-btn {
+    font-size: 10px;
+    color: var(--text-muted);
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 2px 8px;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .redirect-btn:hover { background: var(--border-light); }
+
+  /* Redirect modal */
+  .redirect-modal-bg {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    z-index: 999;
+    align-items: center;
+    justify-content: center;
+  }
+  .redirect-modal-bg.open { display: flex; }
+  .redirect-modal {
+    background: white;
+    border-radius: 16px;
+    padding: 24px 20px;
+    max-width: 300px;
+    width: 90%;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.18);
+  }
+  .redirect-modal h3 {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .redirect-modal p {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-bottom: 16px;
+    line-height: 1.4;
+  }
+  .redirect-shop-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 14px;
+  }
+  .redirect-shop-btn {
+    padding: 9px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: none;
+    font-size: 13px;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    text-align: left;
+    transition: border-color 0.1s, background 0.1s;
+  }
+  .redirect-shop-btn:hover { border-color: var(--orange); background: var(--orange-light); }
+  .redirect-cancel {
+    width: 100%;
+    padding: 9px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: none;
+    font-size: 13px;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    color: var(--text-muted);
+  }
+
+  /* Lager grid & items */
+  .lager-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 6px;
+    padding: 12px;
+  }
+  .lager-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    padding: 8px 10px;
+    background: var(--bg);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    border: 1px solid var(--border-light);
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.1s, border-color 0.1s;
+  }
+  .lager-item.checked {
+    background: #FFF4E0;
+    border-color: var(--orange);
+  }
+  .lager-item.checked .check-item-text {
+    text-decoration: line-through;
+    color: var(--text-muted);
+  }
+  .check {
+    width: 18px;
+    height: 18px;
+    border-radius: 5px;
+    border: 1.5px solid var(--border);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.1s, border-color 0.1s;
+  }
+  .lager-item.checked .check {
+    background: var(--orange);
+    border-color: var(--orange);
+  }
+  .check-mark {
+    display: none;
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .lager-item.checked .check-mark { display: block; }
+
+  .masse-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 6px 0 0 0;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .masse-toggle-btn {
+    display: flex;
+    border-radius: 20px;
+    overflow: hidden;
+    border: 1.5px solid var(--orange);
+    font-size: 11px;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .masse-opt {
+    padding: 3px 10px;
+    cursor: pointer;
+    background: white;
+    color: var(--orange);
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+  .masse-opt.active {
+    background: var(--orange);
+    color: white;
+    font-weight: 600;
+  }
 </style>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
-<div class="wrap">
-  <div class="eyebrow">Bauch-Laden</div>
-  <h1>🧡 Tools</h1>
-  <p class="subtitle">Interne Werkzeuge für Einkauf & Lager</p>
 
-  <a class="tile" href="portionskalkulator.html">
-    <div class="tile-icon">🧮</div>
-    <div class="tile-text">
-      <div class="tile-title">Portionskalkulator</div>
-      <div class="tile-sub">Rezept-basierte Mengenberechnung & Einkaufs-Checklisten</div>
-    </div>
-    <div class="tile-arrow">→</div>
-  </a>
-
-  <a class="tile" href="bestandsaufnahme.html">
-    <div class="tile-icon">📦</div>
-    <div class="tile-text">
-      <div class="tile-title">Bestandsaufnahme</div>
-      <div class="tile-sub">Lagerbestand: Food-Truck, Lager & Back-Kitchen</div>
-    </div>
-    <div class="tile-arrow">→</div>
-  </a>
-
-  <footer>Bauch-Laden Food-Truck</footer>
+<header>
+  <div class="logo">🥙</div>
+  <div class="header-text">
+    <h1>Bauch-Laden Food-Truck</h1>
+    <p>Portionskalkulator &amp; Einkaufsliste <span style="opacity:0.6;font-size:11px;">v4.5</span></p>
+  </div>
+</header>
+<div class="readonly-banner" id="readonly-banner">
+  <span id="banner-text">🛒 Einkaufsmodus — tippe auf einen Artikel um ihn abzuhaken</span>
+  <span style="display:flex;align-items:center;gap:12px;">
+    <span id="back-to-shopping-btn" onclick="backToShopping()" style="display:none;font-size:11px;cursor:pointer;text-decoration:underline;opacity:0.85;">🛒 Zurück zum Einkaufsmodus</span>
+    <span id="backoffice-link" onclick="requestBackoffice()" style="font-size:11px;opacity:0.75;cursor:pointer;text-decoration:underline;">🔒 Backoffice</span>
+  </span>
 </div>
-</body>
-</html>
+
+<!-- PW Modal -->
+<div id="pw-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:999;align-items:center;justify-content:center;">
+  <div style="background:white;border-radius:16px;padding:28px 24px;max-width:320px;width:90%;box-shadow:0 8px 40px rgba(0,0,0,0.18);">
+    <div style="font-size:22px;text-align:center;margin-bottom:8px;">🔒</div>
+    <div style="font-size:15px;font-weight:600;text-align:center;margin-bottom:6px;">Backoffice-Zugang</div>
+    <div style="font-size:12.5px;color:#7A7870;text-align:center;margin-bottom:18px;line-height:1.5;">Dieser Bereich ist nur für das Backoffice.<br>Bitte Passwort eingeben um fortzufahren.</div>
+    <input id="pw-input" type="password" placeholder="Passwort" style="width:100%;padding:10px 12px;border:1.5px solid #E8E6E0;border-radius:8px;font-size:14px;font-family:&#39;DM Sans&#39;,sans-serif;outline:none;margin-bottom:8px;" onkeydown="if(event.key===&#39;Enter&#39;)checkPW()">
+    <div id="pw-error" style="display:none;font-size:12px;color:#c0392b;margin-bottom:8px;text-align:center;">Falsches Passwort. Bitte nochmal versuchen.</div>
+    <div style="display:flex;gap:8px;margin-top:4px;">
+      <button onclick="closePWModal()" style="flex:1;padding:9px;border:1.5px solid #E8E6E0;border-radius:8px;background:none;font-size:13px;cursor:pointer;font-family:&#39;DM Sans&#39;,sans-serif;">Abbrechen</button>
+      <button onclick="checkPW()" style="flex:1;padding:9px;border:none;border-radius:8px;background:#FF9A00;color:white;font-size:13px;font-weight:600;cursor:pointer;font-family:&#39;DM Sans&#39;,sans-serif;">Bestätigen</button>
+    </div>
+  </div>
+</div>
+
+<div class="main">
+
+  <div class="section-label">Gerichte auswählen</div>
+  <div class="dishes" id="dishes"><div class="dish-card selected"><div class="dish-name">Klassik Fladenbrot</div><div class="dish-base">Basis: 30 Port.</div><div class="portion-input-wrap">
+        <div class="portion-label">Portionen</div>
+        <div class="portion-controls">
+          <button class="portion-btn" onclick="event.stopPropagation(); adjustPortion(&#39;Klassik Fladenbrot&#39;, -5)">−</button>
+          <input type="number" class="portion-num" id="pnum-Klassik_Fladenbrot" value="30" min="1" onclick="event.stopPropagation()" oninput="event.stopPropagation(); setPortion(&#39;Klassik Fladenbrot&#39;, this.value)">
+          <button class="portion-btn" onclick="event.stopPropagation(); adjustPortion(&#39;Klassik Fladenbrot&#39;, 5)">+</button>
+        </div>
+      </div></div><div class="dish-card selected"><div class="dish-name">Oriental Fladenbrot</div><div class="dish-base">Basis: 30 Port.</div><div class="portion-input-wrap">
+        <div class="portion-label">Portionen</div>
+        <div class="portion-controls">
+          <button class="portion-btn" onclick="event.stopPropagation(); adjustPortion(&#39;Oriental Fladenbrot&#39;, -5)">−</button>
+          <input type="number" class="portion-num" id="pnum-Oriental_Fladenbrot" value="30" min="1" onclick="event.stopPropagation()" oninput="event.stopPropagation(); setPortion(&#39;Oriental Fladenbrot&#39;, this.value)">
+          <button class="portion-btn" onclick="event.stopPropagation(); adjustPortion(&#39;Oriental Fladenbrot&#39;, 5)">+</button>
+        </div>
+      </div></div><div class="dish-card selected"><div class="dish-name">Gözleme Kartoffel</div><div class="dish-base">Basis: 20 Port.</div><div class="portion-input-wrap">
+        <div class="portion-label">Portionen</div>
+        <div class="portion-controls">
+          <button class="portion-btn" onclick="event.stopPropagation(); adjustPortion(&#39;Gözleme Kartoffel&#39;, -5)">−</button>
+          <input type="number" class="portion-num" id="pnum-Gözleme_Kartoffel" value="20" min="1" onclick="event.stopPropagation()" oninput="event.stopPropagation(); setPortion(&#39;Gözleme Kartoffel&#39;, this.value)">
+          <button class="portion-btn" onclick="event.stopPropagation(); adjustPortion(&#39;Gözleme Kartoffel&#39;, 5)">+</button>
+        </div>
+      </div></div><div class="dish-card"><div class="dish-name">Gözleme Spinat-Käse</div><div class="dish-base">Basis: 20 Port.</div></div><div class="dish-card"><div class="dish-name">Çiğ Köfte</div><div class="dish-base">Basis: 35 Port.</div></div><div class="dish-card"><div class="dish-name">Hummus-Bowl</div><div class="dish-base">Basis: 20 Port.</div></div><div class="dish-card"><div class="dish-name">Linsensuppe</div><div class="dish-base">Basis: 30 Port.</div></div><div class="dish-card"><div class="dish-name">Salep</div><div class="dish-base">Basis: 20 Port.</div></div><div class="dish-card"><div class="dish-name">Kichererbsen-Eintopf</div><div class="dish-base">Basis: 30 Port.</div></div></div>
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab(&#39;einkauf&#39;)" id="tab-einkauf">🛒 Einkaufsliste</button>
+    <button class="tab-btn" onclick="switchTab(&#39;gericht&#39;)" id="tab-gericht">🍽️ Gerichten-View</button>
+  </div>
+
+  <!-- Tab: Einkaufsliste -->
+  <div class="tab-panel active" id="panel-einkauf">
+    <div id="share-row" class="share-row" style="display: flex;">
+      <button class="share-btn" onclick="shareList()">🔗 Liste teilen</button>
+      <button class="reset-btn" style="align-self:center;" onclick="resetBought()">Einkaufsliste zurücksetzen</button>
+      <button class="reset-btn" style="align-self:center;" onclick="openCustomModal()">＋ Eigenes Element</button>
+      <button class="reset-btn" style="align-self:center;" onclick="openStockCheck()">📋 Bestand prüfen</button>
+      <div class="share-toast" id="share-toast">✓ Link kopiert!</div>
+    </div>
+    <div id="result"><div class="shop-block"><div class="shop-name">Gaziantep</div><div class="shop-item">
+        <span class="shop-item-name">Fladenbrot</span>
+        <span class="shop-item-qty">16 Stück</span>
+        <div class="item-checks">
+          <div class="item-check-wrap" onclick="toggleLagerItem(&#39;Gaziantep&#39;,&#39;Fladenbrot&#39;)">
+            <div class="item-check-box">✓</div>
+            <span class="item-check-label">Bestellt/<br>Im Lager</span>
+          </div>
+          <div class="item-check-wrap" onclick="toggleTruckItem(&#39;Gaziantep&#39;,&#39;Fladenbrot&#39;)">
+            <div class="item-check-box">✓</div>
+            <span class="item-check-label">Im Truck</span>
+          </div>
+          <button class="redirect-btn" onclick="openRedirectModal(&#39;Gaziantep&#39;,&#39;Fladenbrot&#39;,&#39;16 Stück&#39;,&#39;Gaziantep&#39;)">🔀</button>
+        </div>
+      </div><div class="shop-item">
+        <span class="shop-item-name">Gözleme (Kartoffel)</span>
+        <span class="shop-item-qty">20 Stück</span>
+        <div class="item-checks">
+          <div class="item-check-wrap" onclick="toggleLagerItem(&#39;Gaziantep&#39;,&#39;Gözleme (Kartoffel)&#39;)">
+            <div class="item-check-box">✓</div>
+            <span class="item-check-label">Bestellt/<br>Im Lager</span>
+          </div>
+          <div class="item-check-wrap" onclick="toggleTruckItem(&#39;Gaziantep&#39;,&#39;Gözleme (Kartoffel)&#39;)">
+            <div class="item-check-box">✓</div>
+            <span class="item-check-label">Im Truck</span>
+          </div>
+          <button class="redirect-btn" onclick="openRedirectModal(&#39;Gaziantep&#39;,&#39;Gözleme (Kartoffel)&#39;,&#39;20 Stück&#39;,&#39;Gaziantep&#39;)">🔀</button>
+        </div>
+      </div></div><div class="shop-block"><div class="shop-name">Türkischer Supermarkt (Hedef/Hakverdi)</div><div class="shop-item">
+        <span class="shop-item-name">Datteln</span>
+        <span class="shop-item-qty">750 g</span>
+        <div class="item-checks">
+          <div class="item-check-wrap" onclick="toggleLagerItem(&#39;Türkischer Supermarkt (Hedef/Hakverdi)&#39;,&#39;Datteln&#39;)">
+            <div class="item-check-box">✓</div>
+            <span class="item-check-label">Bestellt/<br>Im Lager</span>
+          </div>
+          <div class="item-check-wrap" onclick="toggleTruckItem(&#39;Türkischer Supermarkt (Hedef/Hakverdi)&#39;,&#39;Datteln&#39;)">
+            <div class="item-check-box">✓</div>
+            <span class="item-check-label">Im Truck</span>
+          </div>
+          <button class="redirect-btn" onclick="openRedirectModal(&#39;Türkischer Supermarkt (Hedef/Hakverdi)&#39;,&#39;Datteln&#39;,&#39;750 g&#39;,&#39;Türkischer Supermarkt (Hedef/Hakverdi)&#39;)">🔀</button>
+        </div>
+      </div></div><div class="shop-block"><div class="shop-name">Lidl</div><div class="shop-item">
+        <span class="shop-item-name">Olivenöl</span>
+        <span class="shop-item-qty">1.7 L</span>
+        <div class="item-checks">
+          <div class="item-check-wrap" onclick="toggleLagerItem(&#39;Lidl&#39;,&#39;Olivenöl&#39;)">
+            <div class="item-check-box">✓</div>
+            <span class="item-check-label">Bestellt/<br>Im Lager</span>
+          </div>
+          <div class="item-check-wrap" onclick="toggleTruckItem(&#39;Lidl&#39;,&#39;Olivenöl&#39;)">
+            <div class="item-check-box">✓</div>
+            <span class="item-check-label">Im Truck</span>
+          </div>
+          <button class="redirect-btn" onclick="openRedirectModal(&#39;Lidl&#39;,&#39;Olivenöl&#39;,&#39;1.7 L&#39;,&#39;Lidl&#39;)">🔀</button>
+        </div>
+      </div></div><div class="shop-block"><div class="shop-name">Mega</div><div class="shop-item">
+        <span class="shop-item-name">Rucola (gewaschen)</span>
+        <span class="shop-item-qty">300 g</span>
+        <div class="item-checks">
+          <div class="item-check-wrap" onclick="toggleLagerItem(&#39;Mega&#39;,&#39;Rucola (gewaschen)&#39;)">
+            <div class="item-check-box">✓</div>
+            <span class="item-check-label">Bestellt/<br>Im Lager</span>
+          </div>
+          <div class="item-check-wrap" onclick="toggleTruckItem(&#39;Mega&#39;,&#39;Rucola (gewaschen)&#39;)">
+            <div class="item-check-box">✓</div>
+            <span class="item-check-label">Im Truck</span>
+          </div>
+          <button class="redirect-btn" onclick="openRedirectModal(&#39;Mega&#39;,&#39;Rucola (gewaschen)&#39;,&#39;300 g&#39;,&#39;Mega&#39;)">🔀</button>
+        </div>
+      </div><div class="shop-item">
+        <span class="shop-item-name">Mozzarella (Schnitt)</span>
+        <span class="shop-item-qty">1 kg</span>
+        <div class="item-checks">
+          <div class="item-check-wrap" onclick="toggleLagerItem(&#39;Mega&#39;,&#39;Mozzarella (Schnitt)&#39;)">
+            <div class="item-check-box">✓</div>
+            <span class="item-check-label">Bestellt/<br>Im Lager</span>
+          </div>
+          <div class="item-check-wrap" onclick="toggleTruckItem(&#39;Mega&#39;,&#39;Mozzarella (Schnitt)&#39;)">
+            <div class="item-check-box">✓</div>
+            <span class="item-check-label">Im Truck</span>
+          </div>
+          <button class="redirect-btn" onclick="openRedirectModal(&#39;Mega&#39;,&#39;Mozzarella (Schnitt)&#39;,&#39;1 kg&#39;,&#39;Mega&#39;)">🔀</button>
+        </div>
+      </div><div class="shop-item">
+        <span class="shop-item-name">Gouda Käse (Schnitt)</span>
+        <span class="shop-item-qty">2 kg</span>
+        <div class="item-checks">
+          <div class="item-check-wrap" onclick="toggleLagerItem(&#39;Mega&#39;,&#39;Gouda Käse (Schnitt)&#39;)">
+            <div class="item-check-box">✓</div>
+            <span class="item-check-label">Bestellt/<br>Im Lager</span>
+          </div>
+          <div class="item-check-wrap" onclick="toggleTruckItem(&#39;Mega&#39;,&#39;Gouda Käse (Schnitt)&#39;)">
+            <div class="item-check-box">✓</div>
+            <span class="item-check-label">Im Truck</span>
+          </div>
+          <button class="redirect-btn" onclick="openRedirectModal(&#39;Mega&#39;,&#39;Gouda Käse (Schnitt)&#39;,&#39;2 kg&#39;,&#39;Mega&#39;)">🔀</button>
+        </div>
+      </div><div class="shop-item">
+        <span class="shop-item-name">Mega Mix (gemischter Salat)</span>
+        <span class="shop-item-qty">5.1 kg</span>
+        <div class="item-checks">
+          <div class="item-check-wrap" onclick="toggleLagerItem(&#39;Mega&#39;,&#39;Mega Mix (gemischter Salat)&#39;)">
+            <div class="item-check-box">✓</div>
+            <span class="item-check-label">Bestellt/<br>Im Lager</span>
+          </div>
+          <div class="item-check-wrap" onclick="toggleTruckItem(&#39;Mega&#39;,&#39;Mega Mix (gemischter Salat)&#39;)">
+            <div class="item-check-box">✓</div>
+            <span class="item-check-label">Im Truck</span>
+          </div>
+          <button class="redirect-btn" onclick="openRedirectModal(&#39;Mega&#39;,&#39;Mega Mix (gemischter Salat)&#39;,&#39;5.1 kg&#39;,&#39;Mega&#39;)">🔀</button>
+        </div>
+      </div><div class="shop-item">
+        <span class="shop-item-name">Balsamico</span>
+        <span class="shop-item-qty">5 Fl.</span>
+        <div class="item-checks">
+          <div class="item-check-wrap" onclick="toggleLagerItem(&#39;Mega&#39;,&#39;Balsamico&#39;)">
+            <div class="item-check-box">✓</div>
+            <span class="item-check-label">Bestellt/<br>Im Lager</span>
+          </div>
+          <div class="item-check-wrap" onclick="toggleTruckItem(&#39;Mega&#39;,&#39;Balsamico&#39;)">
+            <div class="item-check-box">✓</div>
+            <span class="item-check-label">Im Truck</span>
+          </div>
+          <button class="redirect-btn" onclick="openRedirectModal(&#39;Mega&#39;,&#39;Balsamico&#39;,&#39;5 Fl.&#39;,&#39;Mega&#39;)">🔀</button>
+        </div>
+      </div><div class="shop-item">
+        <span class="shop-item-name">Ajvar</span>
+        <span class="shop-item-qty">3 kg</span>
+        <div class="item-checks">
+          <div class="item-check-wrap" onclick="toggleLagerItem(&#39;Mega&#39;,&#39;Ajvar&#39;)">
+            <div class="item-check-box">✓</div>
+            <span class="item-check-label">Bestellt/<br>Im Lager</span>
+          </div>
+          <div class="item-check-wrap" onclick="toggleTruckItem(&#39;Mega&#39;,&#39;Ajvar&#39;)">
+            <div class="item-check-box">✓</div>
+            <span class="item-check-label">Im Truck</span>
+          </div>
+          <button class="redirect-btn" onclick="openRedirectModal(&#39;Mega&#39;,&#39;Ajvar&#39;,&#39;3 kg&#39;,&#39;Mega&#39;)">🔀</button>
+        </div>
+      </div><div class="shop-item">
+        <span class="shop-item-name">Gewürze (Oregano, Thymian, Pfeffer)</span>
+        <span class="shop-item-qty">2 Pck.</span>
+        <div class="item-checks">
+          <div class="item-check-wrap" onclick="toggleLagerItem(&#39;Mega&#39;,&#39;Gewürze (Oregano, Thymian, Pfeffer)&#39;)">
+            <div class="item-check-box">✓</div>
+            <span class="item-check-label">Bestellt/<br>Im Lager</span>
+          </div>
+          <div class="item-check-wrap" onclick="toggleTruckItem(&#39;Mega&#39;,&#39;Gewürze (Oregano, Thymian, Pfeffer)&#39;)">
+            <div class="item-check-box">✓</div>
+            <span class="item-check-label">Im Truck</span>
+          </div>
+          <button class="redirect-btn" onclick="openRedirectModal(&#39;Mega&#39;,&#39;Gewürze (Oregano, Thymian, Pfeffer)&#39;,&#39;2 Pck.&#39;,&#39;Mega&#39;)">🔀</button>
+        </div>
+      </div></div><div class="shop-block"><div class="shop-name">Selgros</div><div class="shop-item">
+        <span class="shop-item-name">Kalamata Oliven</span>
+        <span class="shop-item-qty">1.5 kg</span>
+        <div class="item-checks">
+          <div class="item-check-wrap" onclick="toggleLagerItem(&#39;Selgros&#39;,&#39;Kalamata Oliven&#39;)">
+            <div class="item-check-box">✓</div>
+            <span class="item-check-label">Bestellt/<br>Im Lager</span>
+          </div>
+          <div class="item-check-wrap" onclick="toggleTruckItem(&#39;Selgros&#39;,&#39;Kalamata Oliven&#39;)">
+            <div class="item-check-box">✓</div>
+            <span class="item-check-label">Im Truck</span>
+          </div>
+          <button class="redirect-btn" onclick="openRedirectModal(&#39;Selgros&#39;,&#39;Kalamata Oliven&#39;,&#39;1.5 kg&#39;,&#39;Selgros&#39;)">🔀</button>
+        </div>
+      </div><div class="shop-item">
+        <span class="shop-item-name">Getrocknete Tomaten</span>
+        <span class="shop-item-qty">1 Pck.</span>
+        <div class="item-checks">
+          <div class="item-check-wrap" onclick="toggleLagerItem(&#39;Selgros&#39;,&#39;Getrocknete Tomaten&#39;)">
+            <div class="item-check-box">✓</div>
+            <span class="item-check-label">Bestellt/<br>Im Lager</span>
+          </div>
+          <div class="item-check-wrap" onclick="toggleTruckItem(&#39;Selgros&#39;,&#39;Getrocknete Tomaten&#39;)">
+            <div class="item-check-box">✓</div>
+            <span class="item-check-label">Im Truck</span>
+          </div>
+          <button class="redirect-btn" onclick="openRedirectModal(&#39;Selgros&#39;,&#39;Getrocknete Tomaten&#39;,&#39;1 Pck.&#39;,&#39;Selgros&#39;)">🔀</button>
+        </div>
+      </div><div class="shop-item">
+        <span class="shop-item-name">Feigenmarmelade</span>
+        <span class="shop-item-qty">4 Glas</span>
+        <div class="item-checks">
+          <div class="item-check-wrap" onclick="toggleLagerItem(&#39;Selgros&#39;,&#39;Feigenmarmelade&#39;)">
+            <div class="item-check-box">✓</div>
+            <span class="item-check-label">Bestellt/<br>Im Lager</span>
+          </div>
+          <div class="item-check-wrap" onclick="toggleTruckItem(&#39;Selgros&#39;,&#39;Feigenmarmelade&#39;)">
+            <div class="item-check-box">✓</div>
+            <span class="item-check-label">Im Truck</span>
+          </div>
+          <button class="redirect-btn" onclick="openRedirectModal(&#39;Selgros&#39;,&#39;Feigenmarmelade&#39;,&#39;4 Glas&#39;,&#39;Selgros&#39;)">🔀</button>
+        </div>
+      </div><div class="shop-item">
+        <span class="shop-item-name">Ziegenkäse</span>
+        <span class="shop-item-qty">2 kg</span>
+        <div class="item-checks">
+          <div class="item-check-wrap" onclick="toggleLagerItem(&#39;Selgros&#39;,&#39;Ziegenkäse&#39;)">
+            <div class="item-check-box">✓</div>
+            <span class="item-check-label">Bestellt/<br>Im Lager</span>
+          </div>
+          <div class="item-check-wrap" onclick="toggleTruckItem(&#39;Selgros&#39;,&#39;Ziegenkäse&#39;)">
+            <div class="item-check-box">✓</div>
+            <span class="item-check-label">Im Truck</span>
+          </div>
+          <button class="redirect-btn" onclick="openRedirectModal(&#39;Selgros&#39;,&#39;Ziegenkäse&#39;,&#39;2 kg&#39;,&#39;Selgros&#39;)">🔀</button>
+        </div>
+      </div></div></div>
+    <div class="section-label" style="margin-top:1.5rem">Aus dem Lager mitnehmen</div>
+    <div class="shop-block">
+      <div class="shop-name" onclick="toggleChecklist()" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between">
+        <span>Lager</span>
+        <span style="display:flex;align-items:center;gap:8px">
+          <span id="check-count" style="font-size:11px;background:rgba(255,255,255,0.25);border-radius:20px;padding:1px 8px">0 / 29</span>
+          <span id="chevron">▾</span>
+        </span>
+      </div>
+      <div id="checklist-items" class="checklist-items" style="display:block"><div class="check-item" onclick="toggleCheckKey(&#39;d_teller_laenglich&#39;)">
+      <div class="checkbox"><span class="checkmark">✓</span></div>
+      <span class="check-item-text">Pleta Teller Länglich (Swawi) ODER Pappteller Länglich — Mega<span class="dyn-count">80 Stück</span></span>
+    </div><div class="check-item" onclick="toggleCheckKey(&#39;d_teller_bowl&#39;)">
+      <div class="checkbox"><span class="checkmark">✓</span></div>
+      <span class="check-item-text">Pleta Teller Bowl (Indra) ODER Pappteller Bowl — Mega<span class="dyn-count dyn-count--empty">—</span></span>
+    </div><div class="check-item" onclick="toggleCheckKey(&#39;d_gabeln&#39;)">
+      <div class="checkbox"><span class="checkmark">✓</span></div>
+      <span class="check-item-text">Gabeln (Birkenholz)<span class="dyn-count">80 Stück</span></span>
+    </div><div class="check-item" onclick="toggleCheckKey(&#39;d_loeffel&#39;)">
+      <div class="checkbox"><span class="checkmark">✓</span></div>
+      <span class="check-item-text">Löffel (Birkenholz)<span class="dyn-count dyn-count--empty">—</span></span>
+    </div><div class="check-item" onclick="toggleCheckKey(&#39;d_servietten&#39;)">
+      <div class="checkbox"><span class="checkmark">✓</span></div>
+      <span class="check-item-text">Servietten<span class="dyn-count">240 Stück</span></span>
+    </div><div class="check-item" onclick="toggleCheckKey(&#39;s_0&#39;)">
+      <div class="checkbox"><span class="checkmark">✓</span></div>
+      <span class="check-item-text">Kleingeld-Münzen (2 € / 1 €)</span>
+    </div><div class="check-item" onclick="toggleCheckKey(&#39;s_1&#39;)">
+      <div class="checkbox"><span class="checkmark">✓</span></div>
+      <span class="check-item-text">Handschuhe Größe M</span>
+    </div><div class="check-item" onclick="toggleCheckKey(&#39;s_2&#39;)">
+      <div class="checkbox"><span class="checkmark">✓</span></div>
+      <span class="check-item-text">Handschuhe Größe L</span>
+    </div><div class="check-item" onclick="toggleCheckKey(&#39;s_3&#39;)">
+      <div class="checkbox"><span class="checkmark">✓</span></div>
+      <span class="check-item-text">Baumwollhandschuhe</span>
+    </div><div class="check-item" onclick="toggleCheckKey(&#39;s_4&#39;)">
+      <div class="checkbox"><span class="checkmark">✓</span></div>
+      <span class="check-item-text">Thermomix</span>
+    </div><div class="check-item" onclick="toggleCheckKey(&#39;s_5&#39;)">
+      <div class="checkbox"><span class="checkmark">✓</span></div>
+      <span class="check-item-text">Wärmebehälter</span>
+    </div><div class="check-item" onclick="toggleCheckKey(&#39;s_6&#39;)">
+      <div class="checkbox"><span class="checkmark">✓</span></div>
+      <span class="check-item-text">Balsamico</span>
+    </div><div class="check-item" onclick="toggleCheckKey(&#39;s_7&#39;)">
+      <div class="checkbox"><span class="checkmark">✓</span></div>
+      <span class="check-item-text">Majoran</span>
+    </div><div class="check-item" onclick="toggleCheckKey(&#39;s_8&#39;)">
+      <div class="checkbox"><span class="checkmark">✓</span></div>
+      <span class="check-item-text">Oregano</span>
+    </div><div class="check-item" onclick="toggleCheckKey(&#39;s_9&#39;)">
+      <div class="checkbox"><span class="checkmark">✓</span></div>
+      <span class="check-item-text">Tork-Handtücher</span>
+    </div><div class="check-item" onclick="toggleCheckKey(&#39;s_10&#39;)">
+      <div class="checkbox"><span class="checkmark">✓</span></div>
+      <span class="check-item-text">Desinfektionsmittel</span>
+    </div><div class="check-item" onclick="toggleCheckKey(&#39;s_11&#39;)">
+      <div class="checkbox"><span class="checkmark">✓</span></div>
+      <span class="check-item-text">Mülltüte 35 Lt</span>
+    </div><div class="check-item" onclick="toggleCheckKey(&#39;s_21&#39;)">
+      <div class="checkbox"><span class="checkmark">✓</span></div>
+      <span class="check-item-text">Mülltüte 60 Lt</span>
+    </div><div class="check-item" onclick="toggleCheckKey(&#39;s_22&#39;)">
+      <div class="checkbox"><span class="checkmark">✓</span></div>
+      <span class="check-item-text">Mülltüte 120 Lt</span>
+    </div><div class="check-item" onclick="toggleCheckKey(&#39;s_12&#39;)">
+      <div class="checkbox"><span class="checkmark">✓</span></div>
+      <span class="check-item-text">Tabasco</span>
+    </div><div class="check-item" onclick="toggleCheckKey(&#39;s_13&#39;)">
+      <div class="checkbox"><span class="checkmark">✓</span></div>
+      <span class="check-item-text">Pappbecher Glühwein — Internet</span>
+    </div><div class="check-item" onclick="toggleCheckKey(&#39;s_14&#39;)">
+      <div class="checkbox"><span class="checkmark">✓</span></div>
+      <span class="check-item-text">Pappbecher Suppe — Internet</span>
+    </div><div class="check-item" onclick="toggleCheckKey(&#39;s_15&#39;)">
+      <div class="checkbox"><span class="checkmark">✓</span></div>
+      <span class="check-item-text">Pappbecher Mokka — Internet</span>
+    </div><div class="check-item" onclick="toggleCheckKey(&#39;s_16&#39;)">
+      <div class="checkbox"><span class="checkmark">✓</span></div>
+      <span class="check-item-text">Pappbecher Probe — Internet</span>
+    </div><div class="check-item" onclick="toggleCheckKey(&#39;s_17&#39;)">
+      <div class="checkbox"><span class="checkmark">✓</span></div>
+      <span class="check-item-text">Frische Basilikum (2×) — Lidl</span>
+    </div><div class="check-item" onclick="toggleCheckKey(&#39;s_18&#39;)">
+      <div class="checkbox"><span class="checkmark">✓</span></div>
+      <span class="check-item-text">Backpapier 100m Profi — Selgros</span>
+    </div><div class="check-item" onclick="toggleCheckKey(&#39;s_19&#39;)">
+      <div class="checkbox"><span class="checkmark">✓</span></div>
+      <span class="check-item-text">Schürze</span>
+    </div><div class="check-item" onclick="toggleCheckKey(&#39;s_20&#39;)">
+      <div class="checkbox"><span class="checkmark">✓</span></div>
+      <span class="check-item-text">Küchentücher</span>
+    </div></div>
+      <div style="padding:10px 14px;border-top:1px solid var(--border-light)">
+        <button class="reset-btn" onclick="resetChecks()">Verbrauchsmaterial &amp; Zubehör zurücksetzen</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab: Gerichten-View -->
+  <div class="tab-panel" id="panel-gericht">
+    <div id="gericht-result">
+      <div class="empty-state">
+        <div class="empty-icon">🍽️</div>
+        Gericht auswählen um die Zutatenliste zu sehen
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Woanders kaufen Modal -->
+<div class="redirect-modal-bg" id="redirect-modal-bg">
+  <div class="redirect-modal">
+    <h3>🔀 Woanders kaufen</h3>
+    <p id="redirect-item-label">Artikel zu anderem Laden verschieben</p>
+    <div class="redirect-shop-list" id="redirect-shop-list"></div>
+    <button class="redirect-cancel" onclick="closeRedirectModal()">Abbrechen</button>
+  </div>
+</div>
+
+<div class="redirect-modal-bg" id="custom-modal-bg">
+  <div class="redirect-modal">
+    <h3>＋ Eigenes Element hinzufügen</h3>
+    <input type="text" id="custom-name" placeholder="Name (z.B. Küchenrolle)" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;outline:none;margin-bottom:8px">
+    <input type="text" id="custom-qty" placeholder="Menge (z.B. 2 Pck.)" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;outline:none;margin-bottom:8px">
+    <p style="font-size:12px;color:var(--text-muted);margin:4px 0 8px">Vendor auswählen um hinzuzufügen:</p>
+    <div class="redirect-shop-list" id="custom-shop-list"></div>
+    <button class="redirect-cancel" onclick="closeCustomModal()">Abbrechen</button>
+  </div>
+</div>
+
+<div class="redirect-modal-bg" id="stock-modal-bg">
+  <div class="redirect-modal" style="max-width:520px">
+    <h3>📋 Bestand prüfen (Food-Truck)</h3>
+    <div id="stock-modal-body">
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px">
+        Vergleicht die Einkaufsliste mit dem aktuellen Food-Truck-Bestand aus der Bestandsaufnahme.
+      </p>
+      <button class="redirect-shop-btn" style="width:100%" onclick="stockSignIn()">Mit Google anmelden &amp; prüfen</button>
+    </div>
+    <button class="redirect-cancel" onclick="closeStockModal()">Schließen</button>
+  </div>
+</div>
+
+<script>
+const BASE = {
+  "Klassik Fladenbrot": { base: 30, shops: {
+    "Selgros": [["Kalamata Oliven", 750, "g"]],
+    "Mega": [["Mega Mix (gemischter Salat)", 1800, "g"], ["Balsamico", 2, "Fl."], ["Ajvar", 1500, "g"]]
+  }},
+  "Oriental Fladenbrot": { base: 30, shops: {
+    "Gaziantep": [["Fladenbrot", 8, "Stück"]],
+    "Lidl": [["Olivenöl", 666, "g"]],
+    "Türkischer Supermarkt (Hedef/Hakverdi)": [["Datteln", 750, "g"]],
+    "Selgros": [["Feigenmarmelade", 4, "Glas"], ["Ziegenkäse", 2000, "g"]],
+    "Mega": [["Rucola (gewaschen)", 50, "g"], ["Mega Mix (gemischter Salat)", 1800, "g"], ["Balsamico", 2, "Fl."], ["Gewürze (Oregano, Thymian, Pfeffer)", 1, "Pck."]]
+  }},
+  "Gözleme Kartoffel": { base: 20, shops: {
+    "Gaziantep": [["Gözleme (Kartoffel)", 20, "Stück"]],
+    "Selgros": [["Kalamata Oliven", 750, "g"]],
+    "Mega": [["Mega Mix (gemischter Salat)", 1500, "g"], ["Balsamico", 1, "Fl."], ["Ajvar", 1500, "g"]]
+  }},
+  "Gözleme Spinat-Käse": { base: 20, shops: {
+    "Gaziantep": [["Gözleme (Spinat-Käse)", 20, "Stück"]],
+    "Selgros": [["Kalamata Oliven", 750, "g"]],
+    "Mega": [["Mega Mix (gemischter Salat)", 1500, "g"], ["Balsamico", 1, "Fl."], ["Ajvar", 1500, "g"]]
+  }},
+  "Çiğ Köfte": { base: 35, shops: {
+    "Türkischer Supermarkt (Hedef/Hakverdi)": [["Arabisches Fladenbrot", 35, "Stück"], ["Bulgur (sehr fein)", 1800, "g"], ["Paprikamark", 400, "g"], ["Granatapfelsirup", 200, "g"], ["Sumach", 10, "TL"]],
+    "Mega": [["Zwiebeln", 1200, "g"], ["Minze", 2, "Bund"], ["Petersilie (geschnitten)", 2, "Bund"], ["Tortilla Chips Natur", 500, "g"], ["Salz", 8, "TL"], ["Kreuzkümmel", 8, "TL"], ["Pfeffer", 2, "TL"], ["Paprikapulver (süß)", 9, "TL"]],
+    "Lidl": [["Knoblauchzehen", 16, "Stück"]],
+    "Lidl": [["Tomaten", 1000, "g"], ["Gurken", 5, "Stück"], ["Olivenöl", 534, "g"], ["Zitronensaft", 50, "ml"], ["Rohrzucker", 32, "g"], ["Wasser", 1500, "ml"], ["Tomatenmark", 250, "g"]]
+  }},
+  "Hummus-Bowl": { base: 20, shops: {
+    "Gaziantep": [["Fladenbrot", 3, "Stück"]],
+    "Lidl": [["Duftreis", 500, "g"], ["Cherry-Tomaten", 20, "Stück"], ["Olivenöl", 40, "g"], ["Wasser", 1500, "ml"]],
+    "Selgros": [["Mais (abgetropft)", 570, "g"], ["Rotkohlsalat", 500, "g"], ["Zaziki", 500, "g"], ["Eingelegte Mini-Gurken", 20, "Stück"], ["Maiskölbchen", 20, "Stück"]],
+    "Mega": [["Mega Mix (gemischter Salat)", 1800, "g"], ["Balsamico", 1, "Fl."], ["Ajvar", 750, "g"], ["Salz", 8, "g"], ["Gewürze (Oregano, Thymian, Pfeffer)", 1, "Pck."], ["Gewürzmischung (Cumin, Cayenne, Salz)", 1, "Pck."]]
+  }},
+  "Linsensuppe": { base: 30, shops: {
+    "Lidl": [["Olivenöl", 71, "g"], ["Zwiebeln", 300, "g"], ["Kartoffeln", 400, "g"], ["Tomatenmark", 200, "g"], ["Zitronen", 2, "Stück"]],
+    "Mega": [["Karotten (gerieben)", 300, "g"]],
+    "DM": [["Rote Linsen", 750, "g"], ["Gemüsebrühe", 40, "g"]],
+    "Türkischer Supermarkt (Hedef/Hakverdi)": [["Arabisches Fladenbrot", 30, "Stück"]]
+  }},
+  "Salep": { base: 20, shops: {
+    "Türkischer Supermarkt (Hedef/Hakverdi)": [["Ahinur Salep Pulver", 400, "g"]],
+    "Lidl": [["Haferdrink", 2000, "ml"], ["Sojadrink", 2000, "ml"], ["Walnüsse", 100, "g"], ["Rohrzucker", 80, "g"]],
+    "Mega": [["Zimtpulver", 20, "g"]]
+  }},
+  "Kichererbsen-Eintopf": { base: 30, shops: {
+    "Selgros": [["Kichererbsen (Dose)", 2, "Dose(n)"], ["Zaziki", 1500, "g"]],
+    "Lidl": [["Tomaten (Dose)", 2, "Dose(n)"], ["Tomatenmark", 200, "g"], ["Zwiebeln", 400, "g"], ["Kartoffeln", 500, "g"], ["Olivenöl", 160, "g"], ["Duftreis", 3000, "g"], ["Wasser", 4500, "ml"], ["Wasser", 3000, "ml"]],
+    "Mega": [["Karottenwürfel", 750, "g"], ["Oregano", 2, "EL"], ["Petersilie (geschnitten)", 0.5, "Bund"]],
+    "DM": [["Gemüsebrühe", 100, "g"]]
+  }}
+};
+
+// Static checklist items (index-based for checkbox state)
+const STATIC_ITEMS = [
+  "Kleingeld-Münzen (2 € / 1 €)", "Handschuhe Größe M", "Handschuhe Größe L",
+  "Baumwollhandschuhe", "Thermomix", "Wärmebehälter",
+  "Balsamico", "Majoran", "Oregano", "Tork-Handtücher", "Desinfektionsmittel",
+  "Mülltüte 35 Lt", "Mülltüte 60 Lt", "Mülltüte 120 Lt", "Tabasco",
+  "Pappbecher Glühwein — Internet", "Pappbecher Suppe — Internet",
+  "Pappbecher Mokka — Internet", "Pappbecher Probe — Internet",
+  "Frische Basilikum (2×) — Lidl", "Backpapier 100m Profi — Selgros",
+  "Schürze", "Küchentücher"
+];
+
+
+const dishNames = Object.keys(BASE);
+const selections = {};
+dishNames.forEach(d => { selections[d] = { active: false, portions: BASE[d].base }; });
+const checked = new Set();
+const lagerItems = new Set();
+let cigKofteMasseSelbst = true; // true = selbst zubereiten, false = fertig kaufen
+
+// Alternatives Çiğ Köfte Rezept wenn Masse fertig gekauft wird (Basis: 35 Portionen)
+const CIG_KOFTE_KAUFEN_SHOPS = {
+  "Türkischer Supermarkt (Hedef/Hakverdi)": [["Arabisches Fladenbrot", 35, "Stück"], ["Granatapfelsirup", 500, "ml"]],
+  "Mega": [["Zwiebeln", 500, "g"], ["Minze", 2, "Bund"], ["Petersilie (geschnitten)", 1, "Bund"], ["Tortilla Chips Natur", 500, "g"]],
+  "Lidl": [["Tomaten", 1000, "g"], ["Gurken", 5, "Stück"], ["Olivenöl", 80, "g"], ["Zitronensaft", 50, "ml"], ["Wasser", 400, "ml"]]
+};
+const truckItems = new Set();
+let checklistOpen = true;
+
+// Returns calculated dynamic items based on active portions
+function getDynamicItems() {
+  const p = name => selections[name] && selections[name].active ? selections[name].portions : 0;
+
+  const fladenbrot = p("Klassik Fladenbrot") + p("Oriental Fladenbrot") + p("Gözleme Kartoffel") + p("Gözleme Spinat-Käse");
+  const bowl = p("Hummus-Bowl");
+  const gabeln = fladenbrot + bowl;
+  const loeffel = p("Linsensuppe") + p("Salep") + p("Hummus-Bowl");
+  const gesamtPortionen = dishNames.reduce((s, n) => s + (selections[n].active ? selections[n].portions : 0), 0);
+  const servietten = gesamtPortionen * 3;
+
+  return [
+    { key: "teller_laenglich", label: "Pleta Teller Länglich (Swawi) ODER Pappteller Länglich — Mega", count: fladenbrot },
+    { key: "teller_bowl",      label: "Pleta Teller Bowl (Indra) ODER Pappteller Bowl — Mega",         count: bowl },
+    { key: "gabeln",           label: "Gabeln (Birkenholz)",                                            count: gabeln },
+    { key: "loeffel",          label: "Löffel (Birkenholz)",                                            count: loeffel },
+    { key: "servietten",       label: "Servietten",                                                     count: servietten },
+  ];
+}
+
+function fmt(val, unit) {
+  const v = Math.round(val * 10) / 10;
+  if (unit === "g" && v >= 1000) return (Math.round(v / 100) / 10).toFixed(1).replace(".0", "") + " kg";
+  if (unit === "ml" && v >= 1000) return (Math.round(v / 100) / 10).toFixed(1).replace(".0", "") + " L";
+  return Math.ceil(v) + " " + unit;
+}
+
+function renderDishes() {
+  const container = document.getElementById('dishes');
+  container.innerHTML = '';
+  dishNames.forEach(name => {
+    const sel = selections[name];
+    const card = document.createElement('div');
+    card.className = 'dish-card' + (sel.active ? ' selected' : '');
+
+    let inner = `<div class="dish-name">${name}</div><div class="dish-base">Basis: ${BASE[name].base} Port.</div>`;
+    if (sel.active) {
+      inner += `<div class="portion-input-wrap">
+        <div class="portion-label">Portionen</div>
+        <div class="portion-controls">
+          <button class="portion-btn" onclick="event.stopPropagation(); adjustPortion('${name}', -5)">−</button>
+          <input type="number" class="portion-num" id="pnum-${name.replace(/\s/g,'_')}" value="${sel.portions}" min="1" onclick="event.stopPropagation()" oninput="event.stopPropagation(); setPortion('${name}', this.value)">
+          <button class="portion-btn" onclick="event.stopPropagation(); adjustPortion('${name}', 5)">+</button>
+        </div>
+      </div>`;
+
+    }
+    card.innerHTML = inner;
+    card.addEventListener('click', () => {
+      selections[name].active = !selections[name].active;
+      renderDishes();
+      renderResult();
+    });
+    container.appendChild(card);
+
+    // After Çiğ Köfte card, insert toggle card if active
+    if (name === 'Çiğ Köfte' && sel.active) {
+      const toggleCard = document.createElement('div');
+      toggleCard.className = 'dish-card selected';
+      toggleCard.style.cursor = 'default';
+      toggleCard.innerHTML = `
+        <div class="dish-name" style="font-size:13px">Çiğ Köfte Masse</div>
+        <div style="margin-top:8px;display:flex;flex-direction:column;gap:6px" onclick="event.stopPropagation()">
+          <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;${cigKofteMasseSelbst?'font-weight:600;color:var(--orange)':'color:var(--text-muted)'}" onclick="event.stopPropagation();setMasse(true)">
+            <span style="width:16px;height:16px;border-radius:50%;border:2px solid ${cigKofteMasseSelbst?'var(--orange)':'var(--border)'};display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">${cigKofteMasseSelbst?'<span style=\'width:8px;height:8px;border-radius:50%;background:var(--orange)\'></span>':''}</span>
+            🥣 Selbst zubereiten
+          </label>
+          <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;${!cigKofteMasseSelbst?'font-weight:600;color:var(--orange)':'color:var(--text-muted)'}" onclick="event.stopPropagation();setMasse(false)">
+            <span style="width:16px;height:16px;border-radius:50%;border:2px solid ${!cigKofteMasseSelbst?'var(--orange)':'var(--border)'};display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">${!cigKofteMasseSelbst?'<span style=\'width:8px;height:8px;border-radius:50%;background:var(--orange)\'></span>':''}</span>
+            📦 Fertig kaufen
+          </label>
+        </div>`;
+      container.appendChild(toggleCard);
+    }
+  });
+}
+
+function adjustPortion(name, delta) {
+  selections[name].portions = Math.max(1, selections[name].portions + delta);
+  const el = document.getElementById('pnum-' + name.replace(/\s/g,'_'));
+  if (el) el.value = selections[name].portions;
+  renderResult();
+}
+
+function setPortion(name, val) {
+  const n = parseInt(val) || 0;
+  if (n <= 0) {
+    selections[name].portions = 0;
+  } else {
+    selections[name].portions = n;
+  }
+  renderResult();
+}
+
+let doneItems = [];
+let lagerRedirectedItems = [];
+let backKitchenDone = [];
+function renderResult() {
+  const res = document.getElementById('result');
+  const active = dishNames.filter(n => selections[n].active && selections[n].portions > 0);
+  const shareRow = document.getElementById('share-row');
+
+  if (!active.length) {
+    res.innerHTML = `<div class="empty-state"><div class="empty-icon">🛒</div>Gericht auswählen um die Einkaufsliste zu generieren</div>`;
+    if (shareRow) shareRow.style.display = 'none';
+    lagerRedirectedItems = [];
+    backKitchenDone = [];
+    renderChecklist();
+    return;
+  }
+
+  if (shareRow) shareRow.style.display = 'flex';
+
+  backKitchenDone = [];
+  const combined = {};
+  active.forEach(name => {
+    const factor = selections[name].portions / BASE[name].base;
+    const effectiveShops = (name === "Çiğ Köfte" && !cigKofteMasseSelbst)
+      ? CIG_KOFTE_KAUFEN_SHOPS
+      : BASE[name].shops;
+    Object.entries(effectiveShops).forEach(([shop, items]) => {
+      items.forEach(([item, qty, unit]) => {
+        // Check if redirected to another shop
+        const redirectKey = shop + '|' + item;
+        const effectiveShop = itemRedirects[redirectKey] || shop;
+        if (!combined[effectiveShop]) combined[effectiveShop] = {};
+        const key = item + '|' + unit;
+        if (!combined[effectiveShop][key]) combined[effectiveShop][key] = { item, qty: 0, unit, originalShop: shop };
+        else combined[effectiveShop][key].originalShop = combined[effectiveShop][key].originalShop || shop;
+        combined[effectiveShop][key].qty += qty * factor;
+      });
+    });
+  });
+
+  // Eigene Elemente in die Vendor-Sektionen einfügen
+  customItems.forEach(({name, qty, vendor}) => {
+    if (!combined[vendor]) combined[vendor] = {};
+    combined[vendor][name + '|custom'] = { item: name, qty: 0, unit: '', customQty: qty, custom: true, originalShop: vendor };
+  });
+
+  // Items die zu "Lager" verschoben wurden: aus Vendor-Blöcken herausziehen,
+  // renderChecklist zeigt sie in der Lager-Box an
+  lagerRedirectedItems = [];
+  if (combined['Lager']) {
+    Object.values(combined['Lager']).forEach(entry => lagerRedirectedItems.push(entry));
+    delete combined['Lager'];
+  }
+
+  // Inject redirected Lager/Verbrauchsmaterial items into target vendor
+  const VS = 'Verbrauchsmaterial';
+  const allLagerItems = [...getDynamicItems().map(d => d.label), ...STATIC_ITEMS];
+  allLagerItems.forEach(item => {
+    const redirectKey = VS + '|' + item;
+    const targetShop = itemRedirects[redirectKey];
+    if (targetShop && targetShop !== VS) {
+      if (!combined[targetShop]) combined[targetShop] = {};
+      const key = item + '|lager';
+      if (!combined[targetShop][key]) {
+        combined[targetShop][key] = { item, qty: 0, unit: '', originalShop: VS };
+      }
+    }
+  });
+
+  let html = '';
+  doneItems = [];
+  const shopOrder = ["Gaziantep","Türkischer Supermarkt (Hedef/Hakverdi)","Hakverdi","Lidl","Mega","Selgros","DM","Türkischer Markt"];
+  const allShops = [...new Set([...shopOrder, ...Object.keys(combined)])].filter(s => combined[s]);
+
+  allShops.forEach(shop => {
+    const allShopItems = Object.values(combined[shop]);
+    const pendingItems = allShopItems.filter(({item}) => !(lagerItems.has(shop+'|'+item) && truckItems.has(shop+'|'+item)));
+    const completedItems = allShopItems.filter(({item}) => lagerItems.has(shop+'|'+item) && truckItems.has(shop+'|'+item));
+    completedItems.forEach(entry => doneItems.push({...entry, shop}));
+
+    if (pendingItems.length === 0) return;
+
+    html += `<div class="shop-block"><div class="shop-name">${shop}</div>`;
+    pendingItems.forEach(({item, qty, unit, originalShop, customQty, custom}) => {
+      const bkey = shop + '|' + item;
+      const isLager = lagerItems.has(bkey);
+      const isTruck = truckItems.has(bkey);
+      const statusClass = isTruck ? ' status-truck' : (isLager ? ' status-lager' : '');
+      const safeShop = shop.replace(/'/g, "\'");
+      const safeItem = item.replace(/'/g, "\'");
+      const origShop = originalShop || shop;
+      const redirectKey = origShop + '|' + item;
+      const redirectedTo = itemRedirects[redirectKey];
+      const redirectBadge = custom ? `<span class="redirect-badge">eigenes Element</span>` : ((redirectedTo && redirectedTo === shop) ? `<span class="redirect-badge">verschoben von ${origShop}</span>` : '');
+      const safeOrigShop = origShop.replace(/'/g, "\'");
+      const qtyDisplay = custom ? customQty : fmt(qty, unit);
+      const shortage = stockShortages[normName(item)];
+      const stockBadge = shortage ? `<span class="stock-badge">⚠️ Bestand ${fmt(shortage.have, shortage.unit)}</span>` : '';
+      const actionBtn = custom
+        ? `<button class="redirect-btn" onclick="removeCustomItem('${safeItem}','${safeShop}')">✕</button>`
+        : `<button class="redirect-btn" onclick="openRedirectModal('${safeOrigShop}','${safeItem}','${fmt(qty,unit).replace(/'/g,"\'")}','${safeShop}')">🔀</button>`;
+      html += `<div class="shop-item${statusClass}${shortage?' stock-low':''}">
+        <span class="shop-item-name">${item}${redirectBadge}${stockBadge}</span>
+        <span class="shop-item-qty">${qtyDisplay}</span>
+        <div class="item-checks">
+          <div class="item-check-wrap" onclick="toggleLagerItem('${safeShop}','${safeItem}')">
+            <div class="item-check-box${isLager||isTruck?' checked-lager':''}">✓</div>
+            <span class="item-check-label">Bestellt/<br>Im Lager</span>
+          </div>
+          <div class="item-check-wrap" onclick="toggleTruckItem('${safeShop}','${safeItem}')">
+            <div class="item-check-box${isTruck?' checked-truck':''}">✓</div>
+            <span class="item-check-label">Im Truck</span>
+          </div>
+          ${actionBtn}
+        </div>
+      </div>`;
+    });
+    html += '</div>';
+  });
+
+  if (active.includes("Çiğ Köfte")) {
+    const p = selections["Çiğ Köfte"].portions;
+    const factor = p / 35;
+    const rounds = Math.ceil(factor * 4);
+    let hintHtml;
+    if (cigKofteMasseSelbst) {
+      hintHtml = `<div class="thermomix-hint">🌀 Çiğ Köfte: ca. <strong>${rounds} Thermomix-Runde(n)</strong> für ${p} Portionen (à 450 g Bulgur)</div>`;
+    } else {
+      hintHtml = `<div class="thermomix-hint">📦 <strong>${(5*factor).toFixed(1)} kg</strong> Çiğ Köfte Masse mit <strong>${Math.round(400*factor)} ml</strong> heißem Wasser, <strong>${Math.round(80*factor)} g</strong> Olivenöl und <strong>${Math.round(100*factor)} ml</strong> Granatapfelsirup mischen und kneten.</div>`;
+    }
+    html = hintHtml + html; // Hint ganz oben, immer sichtbar
+  }
+
+  // Back-Kitchen Checkliste für Hummus (1 Tag vorher, 1 Thermomix-Runde = 10 Portionen)
+  if (active.includes("Hummus-Bowl")) {
+    const hp = selections["Hummus-Bowl"].portions;
+    const r = hp / 10; // exakte Runden, linear skaliert
+    const rDisplay = (Math.round(r * 10) / 10).toString().replace('.', ',');
+    const hummusItems = [
+      { name: "Kichererbsen (abgetropft)", qty: Math.round(750*r), unit: "g" },
+      { name: "Kichererbsensaft", qty: Math.round(200*r), unit: "g" },
+      { name: "Tahin", qty: Math.round(100*r), unit: "g" },
+      { name: "Knoblauchzehen", qty: Math.round(2*r*10)/10, unit: "Stück" },
+      { name: "Olivenöl (Hummus)", qty: Math.round(80*r), unit: "g" },
+      { name: "Zitronensaft", qty: Math.round(45*r), unit: "ml" },
+      { name: "Petersilie (gehackt)", qty: Math.round(25*r), unit: "g" },
+      { name: "Salz (Hummus)", qty: Math.round(11*r), unit: "g" },
+      { name: "Kreuzkümmel", qty: Math.round(4*r), unit: "g" },
+      { name: "Cayennepfeffer", qty: Math.round(0.1*r*10)/10, unit: "g" },
+      { name: "Metall GN 1/4 Behälter + Deckel", qty: Math.ceil(hp / 20), unit: "Stück" },
+    ];
+    let hummusRows = '';
+    hummusItems.forEach(({name, qty, unit}) => {
+      const key = 'Hummus|' + name;
+      const isLg = lagerItems.has(key);
+      const isBk = truckItems.has(key);
+      const done = isLg && isBk;
+      if (done) {
+        backKitchenDone.push({ name, extra: ` (${qty} ${unit})`, shop: 'Hummus', label2: 'In der<br>Back-Küche' });
+        return;
+      }
+      const safeName = name.replace(/'/g, "\\'");
+      hummusRows += `<div class="shop-item">
+        <span class="shop-item-name">${name}</span>
+        <span class="shop-item-qty">${qty} ${unit}</span>
+        <div class="item-checks">
+          <div class="item-check-wrap${isLg?' checked':''}" onclick="toggleLagerItem('Hummus','${safeName}')">
+            <div class="item-check-box${isLg?' checked-lager':''}">✓</div>
+            <span class="item-check-label">Bestellt/<br>Im Lager</span>
+          </div>
+          <div class="item-check-wrap${isBk?' checked':''}" onclick="toggleTruckItem('Hummus','${safeName}')">
+            <div class="item-check-box${isBk?' checked-truck':''}">✓</div>
+            <span class="item-check-label">In der<br>Back-Küche</span>
+          </div>
+        </div>
+      </div>`;
+    });
+    const hummusHint = `<div class="shop-block" style="border:1.5px solid #4caf50">
+      <div class="shop-name" style="background:#4caf50">🏠 Back-Kitchen (1 Tag vorher): ${rDisplay} Thermomix-Runde(n) Hummus für ${hp} Bowls</div>
+      ${hummusRows}
+    </div>`;
+    html = hummusHint + html;
+  }
+
+  // Back-Kitchen Checkliste für Klassik Fladenbrote (eigenständige Box)
+  if (active.includes("Klassik Fladenbrot")) {
+    const kp = selections["Klassik Fladenbrot"].portions;
+    const kf = kp / 30;
+    const rnd1 = v => Math.round(v * 10) / 10;
+    const klassikItems = [
+      { name: "Fladenbrot", qty: rnd1(8*kf), unit: "Stück" },
+      { name: "Olivenöl", qty: Math.round(100*kf), unit: "g" },
+      { name: "Getrocknete Tomaten", qty: rnd1(1.2*kf), unit: "Fl." },
+      { name: "Rucola (gewaschen)", qty: Math.round(100*kf), unit: "g" },
+      { name: "Mozzarella (Schnitt)", qty: Math.round(1000*kf), unit: "g" },
+      { name: "Gouda Käse (Schnitt)", qty: Math.round(2000*kf), unit: "g" },
+      { name: "Gewürze (Oregano, Thymian, Pfeffer)", qty: rnd1(1*kf), unit: "Pck." },
+      { name: "Isolierbox", qty: Math.ceil(kp / 40), unit: "Stück" },
+      { name: "Iso-Box-Tüte", qty: Math.ceil(kp / 40), unit: "Stück" },
+    ];
+    let klassikRows = '';
+    klassikItems.forEach(({name, qty, unit}) => {
+      const key = 'Klassik|' + name;
+      const isLg = lagerItems.has(key);
+      const isBk = truckItems.has(key);
+      const done = isLg && isBk;
+      if (done) {
+        backKitchenDone.push({ name, extra: ` (${qty} ${unit})`, shop: 'Klassik', label2: 'In der<br>Back-Küche' });
+        return;
+      }
+      const safeName = name.replace(/'/g, "\\'");
+      klassikRows += `<div class="shop-item">
+        <span class="shop-item-name">${name}</span>
+        <span class="shop-item-qty">${qty} ${unit}</span>
+        <div class="item-checks">
+          <div class="item-check-wrap${isLg?' checked':''}" onclick="toggleLagerItem('Klassik','${safeName}')">
+            <div class="item-check-box${isLg?' checked-lager':''}">✓</div>
+            <span class="item-check-label">Bestellt/<br>Im Lager</span>
+          </div>
+          <div class="item-check-wrap${isBk?' checked':''}" onclick="toggleTruckItem('Klassik','${safeName}')">
+            <div class="item-check-box${isBk?' checked-truck':''}">✓</div>
+            <span class="item-check-label">In der<br>Back-Küche</span>
+          </div>
+        </div>
+      </div>`;
+    });
+    const klassikHint = `<div class="shop-block" style="border:1.5px solid #2c7fb8">
+      <div class="shop-name" style="background:#2c7fb8">🥖 Back-Kitchen: Klassik Fladenbrote Vorbereitung für ${kp} Portionen</div>
+      ${klassikRows}
+    </div>`;
+    html = klassikHint + html;
+  }
+
+  res.innerHTML = html;
+  renderChecklist();
+  if (document.getElementById('panel-gericht').classList.contains('active')) renderGerichtView();
+}
+
+function toggleKlassikItem(name) {
+  const key = 'Klassik|' + name;
+  if (lagerItems.has(key)) lagerItems.delete(key);
+  else lagerItems.add(key);
+  renderResult();
+}
+
+function toggleHummusItem(name) {
+  const key = 'Hummus|' + name;
+  if (lagerItems.has(key)) lagerItems.delete(key);
+  else lagerItems.add(key);
+  renderResult();
+}
+
+function setMasse(selbst) {
+  cigKofteMasseSelbst = selbst;
+  renderDishes();
+  renderResult();
+}
+
+function toggleLagerItem(shop, item) {
+  const key = shop + '|' + item;
+  if (lagerItems.has(key)) {
+    lagerItems.delete(key);
+    truckItems.delete(key);
+  } else {
+    lagerItems.add(key);
+  }
+  renderResult();
+}
+
+function toggleTruckItem(shop, item) {
+  const key = shop + '|' + item;
+  if (truckItems.has(key)) {
+    truckItems.delete(key);
+  } else {
+    truckItems.add(key);
+    lagerItems.add(key); // auto-check lager too
+  }
+  renderResult();
+}
+
+function resetBought() {
+  lagerItems.clear();
+  truckItems.clear();
+  renderResult();
+}
+
+// item redirects: "originalShop|item" -> "newShop"
+const itemRedirects = {};
+
+const ALL_SHOPS = ["Gaziantep","Türkischer Supermarkt (Hedef/Hakverdi)","Lidl","Mega","Selgros","DM","Rewe","Kaufland","Edeka","Lager","Sonstiges"];
+
+// ===== Bestandsabgleich mit Food-Truck (Google Sheet) =====
+const STOCK_CLIENT_ID = '365188445705-sb6ps80cb1v2llir0llpipnca44da521.apps.googleusercontent.com';
+const STOCK_SHEET_ID  = '15VGWYL9YMFUy-IKrWB-ULbRn5fd7aDtU4vLb2Qy66P8';
+let stockTokenClient = null;
+let stockToken = null;
+let stockData = null;      // [{name, menge}]
+let stockShortages = {};   // normalisierter Name -> {need, have, item}
+
+// Normalisierung für den Namensabgleich
+function normName(s) {
+  return (s||'')
+    .toLowerCase()
+    .replace(/\(.*?\)/g, '')          // Klammerzusätze weg
+    .replace(/—.*$/, '')              // alles nach Gedankenstrich weg
+    .replace(/[^a-zäöüß0-9]/g, '')    // Sonderzeichen/Leerzeichen weg
+    .trim();
+}
+
+function openStockCheck() {
+  document.getElementById('stock-modal-bg').classList.add('open');
+  if (stockData) { renderStockResult(); }
+}
+
+function closeStockModal() { document.getElementById('stock-modal-bg').classList.remove('open'); }
+
+function stockSignIn() {
+  if (typeof google === 'undefined' || !google.accounts) {
+    document.getElementById('stock-modal-body').innerHTML = '<p style="font-size:13px;color:var(--text-muted)">Google lädt noch — bitte kurz warten und erneut versuchen.</p>';
+    return;
+  }
+  if (!stockTokenClient) {
+    stockTokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: STOCK_CLIENT_ID,
+      scope: 'https://www.googleapis.com/auth/spreadsheets.readonly',
+      login_hint: 'info@bauchladen.kitchen',
+      callback: (resp) => {
+        if (resp.error || !resp.access_token) {
+          document.getElementById('stock-modal-body').innerHTML = '<p style="font-size:13px;color:var(--red)">Anmeldung fehlgeschlagen.</p>';
+          return;
+        }
+        stockToken = resp.access_token;
+        loadStock();
+      }
+    });
+  }
+  document.getElementById('stock-modal-body').innerHTML = '<p style="font-size:13px;color:var(--text-muted)">⏳ Anmeldung läuft…</p>';
+  stockTokenClient.requestAccessToken({ prompt: '' });
+}
+
+async function loadStock() {
+  document.getElementById('stock-modal-body').innerHTML = '<p style="font-size:13px;color:var(--text-muted)">⏳ Lade Bestand…</p>';
+  try {
+    const resp = await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${STOCK_SHEET_ID}/values/Food-Truck!A2:D500`,
+      { headers: { Authorization: `Bearer ${stockToken}` } }
+    );
+    const data = await resp.json();
+    stockData = (data.values||[])
+      .map(r => ({ name: r[0]||'', menge: r[2]||'', archived: r[3]==='ja' }))
+      .filter(r => r.name && !r.archived);
+    computeShortages();
+    renderStockResult();
+    renderResult();
+  } catch(e) {
+    document.getElementById('stock-modal-body').innerHTML = '<p style="font-size:13px;color:var(--red)">Fehler beim Laden des Bestands.</p>';
+  }
+}
+
+// Bedarf aus der aktuellen Einkaufsliste ermitteln und mit Bestand vergleichen
+function computeShortages() {
+  stockShortages = {};
+  if (!stockData) return;
+  const stockMap = {};
+  stockData.forEach(s => {
+    const n = normName(s.name);
+    const val = parseFloat(String(s.menge).replace(',', '.'));
+    if (n) stockMap[n] = { raw: s.name, val: isNaN(val) ? null : val };
+  });
+
+  const active = dishNames.filter(n => selections[n].active && selections[n].portions > 0);
+  const need = {}; // normName -> {qty, unit, item}
+  const addNeed = (item, qty, unit) => {
+    const n = normName(item);
+    if (!n) return;
+    if (!need[n]) need[n] = { qty: 0, unit, item };
+    need[n].qty += qty;
+  };
+
+  // Vendor-Rezepte
+  active.forEach(name => {
+    const factor = selections[name].portions / BASE[name].base;
+    const shops = (name === "Çiğ Köfte" && !cigKofteMasseSelbst) ? CIG_KOFTE_KAUFEN_SHOPS : BASE[name].shops;
+    Object.values(shops).forEach(items => {
+      items.forEach(([item, qty, unit]) => addNeed(item, qty * factor, unit));
+    });
+  });
+
+  // Back-Kitchen Hummus (1 Runde = 10 Bowls)
+  if (active.includes("Hummus-Bowl")) {
+    const r = selections["Hummus-Bowl"].portions / 10;
+    addNeed("Kichererbsen", 750*r, "g");
+    addNeed("Kichererbsensaft", 200*r, "g");
+    addNeed("Tahin", 100*r, "g");
+    addNeed("Knoblauchzehen", 2*r, "Stück");
+    addNeed("Olivenöl", 80*r, "g");
+    addNeed("Zitronensaft", 45*r, "ml");
+    addNeed("Petersilie", 25*r, "g");
+    addNeed("Salz", 11*r, "g");
+    addNeed("Kreuzkümmel", 4*r, "g");
+    addNeed("Cayennepfeffer", 0.1*r, "g");
+  }
+
+  // Back-Kitchen Klassik Fladenbrote
+  if (active.includes("Klassik Fladenbrot")) {
+    const kf = selections["Klassik Fladenbrot"].portions / 30;
+    addNeed("Fladenbrot", 8*kf, "Stück");
+    addNeed("Olivenöl", 100*kf, "g");
+    addNeed("Getrocknete Tomaten", 1.2*kf, "Fl.");
+    addNeed("Rucola", 100*kf, "g");
+    addNeed("Mozzarella", 1000*kf, "g");
+    addNeed("Gouda", 2000*kf, "g");
+  }
+
+  Object.keys(need).forEach(n => {
+    const st = stockMap[n];
+    if (!st || st.val === null) return;      // kein Match oder kein Zahlenwert -> ignorieren
+    if (st.val < need[n].qty) {
+      stockShortages[n] = { need: need[n].qty, have: st.val, unit: need[n].unit, item: need[n].item, stockName: st.raw };
+    }
+  });
+}
+
+function renderStockResult() {
+  const body = document.getElementById('stock-modal-body');
+  if (!stockData) return;
+  const keys = Object.keys(stockShortages);
+  const matched = stockData.length;
+  let html = `<p style="font-size:12px;color:var(--text-muted);margin-bottom:10px">${matched} Positionen im Food-Truck-Bestand gelesen.</p>`;
+  if (keys.length === 0) {
+    html += '<p style="font-size:13px;color:#2a7a2a;font-weight:600">✓ Kein Engpass gefunden — alle zuordenbaren Zutaten sind ausreichend vorhanden.</p>';
+  } else {
+    html += `<p style="font-size:13px;color:var(--red);font-weight:600;margin-bottom:8px">⚠️ ${keys.length} Zutat(en) reichen nicht:</p>`;
+    keys.forEach(k => {
+      const s = stockShortages[k];
+      html += `<div style="display:flex;justify-content:space-between;gap:8px;font-size:12.5px;padding:5px 0;border-bottom:1px solid var(--border-light)">
+        <span>${s.item}</span>
+        <span style="font-family:'DM Mono',monospace;color:var(--red);white-space:nowrap">${fmt(s.have, s.unit)} / ${fmt(s.need, s.unit)}</span>
+      </div>`;
+    });
+    html += '<p style="font-size:11.5px;color:var(--text-muted);margin-top:10px">Diese Zutaten sind in der Einkaufsliste rot markiert. Nicht zuordenbare Namen werden übersprungen.</p>';
+  }
+  html += '<button class="redirect-shop-btn" style="width:100%;margin-top:12px" onclick="loadStock()">🔄 Bestand neu laden</button>';
+  body.innerHTML = html;
+}
+
+let customItems = []; // {name, qty, vendor}
+
+function openCustomModal() {
+  document.getElementById('custom-name').value = '';
+  document.getElementById('custom-qty').value = '';
+  const list = document.getElementById('custom-shop-list');
+  list.innerHTML = '';
+  ALL_SHOPS.forEach(s => {
+    const btn = document.createElement('button');
+    btn.className = 'redirect-shop-btn';
+    btn.textContent = s;
+    btn.onclick = () => addCustomItem(s);
+    list.appendChild(btn);
+  });
+  document.getElementById('custom-modal-bg').classList.add('open');
+  setTimeout(() => document.getElementById('custom-name').focus(), 50);
+}
+
+function closeCustomModal() { document.getElementById('custom-modal-bg').classList.remove('open'); }
+
+function addCustomItem(vendor) {
+  const name = document.getElementById('custom-name').value.trim();
+  const qty = document.getElementById('custom-qty').value.trim() || '—';
+  if (!name) { document.getElementById('custom-name').focus(); return; }
+  customItems.push({ name, qty, vendor });
+  closeCustomModal();
+  renderResult();
+}
+
+function removeCustomItem(name, vendor) {
+  const idx = customItems.findIndex(c => c.name === name && c.vendor === vendor);
+  if (idx >= 0) customItems.splice(idx, 1);
+  lagerItems.delete(vendor + '|' + name);
+  truckItems.delete(vendor + '|' + name);
+  renderResult();
+}
+
+function openRedirectModal(origShop, item, qty, currentShop) {
+  const bg = document.getElementById('redirect-modal-bg');
+  const current = currentShop || origShop;
+  document.getElementById('redirect-item-label').textContent = `"${item}" (${qty}) — aktuell bei ${current}`;
+  const list = document.getElementById('redirect-shop-list');
+  const key = origShop + '|' + item;
+  list.innerHTML = '';
+  // Reset option if already redirected
+  if (itemRedirects[key]) {
+    const resetBtn = document.createElement('button');
+    resetBtn.className = 'redirect-shop-btn';
+    resetBtn.style.color = '#c0392b';
+    resetBtn.textContent = '✕ Zurücksetzen (wieder ' + origShop + ')';
+    resetBtn.onclick = () => { delete itemRedirects[key]; closeRedirectModal(); renderResult(); };
+    list.appendChild(resetBtn);
+  }
+  // All shops except current location
+  ALL_SHOPS.filter(s => s !== current && !(origShop === 'Verbrauchsmaterial' && s === 'Lager')).forEach(s => {
+    const btn = document.createElement('button');
+    btn.className = 'redirect-shop-btn';
+    btn.textContent = s;
+    btn.onclick = () => { itemRedirects[key] = s; closeRedirectModal(); renderResult(); };
+    list.appendChild(btn);
+  });
+  bg.classList.add('open');
+}
+
+function closeRedirectModal() {
+  document.getElementById('redirect-modal-bg').classList.remove('open');
+}
+
+document.addEventListener('click', e => {
+  const bg = document.getElementById('redirect-modal-bg');
+  if (e.target === bg) closeRedirectModal();
+  const cbg = document.getElementById('custom-modal-bg');
+  if (e.target === cbg) closeCustomModal();
+  const sbg = document.getElementById('stock-modal-bg');
+  if (e.target === sbg) closeStockModal();
+});
+
+function switchTab(tab) {
+  document.getElementById('panel-einkauf').classList.toggle('active', tab === 'einkauf');
+  document.getElementById('panel-gericht').classList.toggle('active', tab === 'gericht');
+  document.getElementById('tab-einkauf').classList.toggle('active', tab === 'einkauf');
+  document.getElementById('tab-gericht').classList.toggle('active', tab === 'gericht');
+  if (tab === 'gericht') renderGerichtView();
+}
+
+function renderGerichtView() {
+  const res = document.getElementById('gericht-result');
+  const active = dishNames.filter(n => selections[n].active && selections[n].portions > 0);
+  if (!active.length) {
+    res.innerHTML = '<div class="empty-state"><div class="empty-icon">🍽️</div>Gericht auswählen um die Zutatenliste zu sehen</div>';
+    return;
+  }
+  let html = '';
+  active.forEach(name => {
+    const factor = selections[name].portions / BASE[name].base;
+    html += `<div class="gericht-block">
+      <div class="gericht-header">
+        <span class="gericht-title">${name}</span>
+        <span class="gericht-badge">${selections[name].portions} Portionen</span>
+      </div>`;
+    Object.entries(BASE[name].shops).forEach(([shop, items]) => {
+      items.forEach(([item, qty, unit]) => {
+        html += `<div class="gericht-item">
+          <div class="gericht-item-left">
+            <div class="item-name">${item}</div>
+            <div class="item-shop">${shop}</div>
+          </div>
+          <span class="shop-item-qty">${fmt(qty * factor, unit)}</span>
+        </div>`;
+      });
+    });
+    html += '</div>';
+  });
+  res.innerHTML = html;
+}
+
+function backToShopping() {
+  document.getElementById('dishes').style.display = 'none';
+  document.querySelector('.section-label').style.display = 'none';
+  document.getElementById('readonly-banner').style.display = 'flex';
+  document.getElementById('banner-text').textContent = '🛒 Einkaufsmodus — tippe auf einen Artikel um ihn abzuhaken';
+  document.getElementById('share-row').style.display = 'none';
+  document.getElementById('backoffice-link').style.display = 'inline';
+  document.getElementById('back-to-shopping-btn').style.display = 'none';
+  renderResult();
+}
+
+function shareList() {
+  const params = [];
+  dishNames.forEach(name => {
+    if (selections[name].active && selections[name].portions > 0) {
+      params.push(encodeURIComponent(name) + ':' + selections[name].portions);
+    }
+  });
+  if (!params.length) return;
+
+  let url = window.location.href.split('?')[0] + '?list=' + params.join(',');
+
+  // Encode lager + truck items — doppelt encodiert, da URLSearchParams beim
+  // Lesen einmal decodiert und Kommas in Namen sonst das Splitting zerstören
+  const enc2 = k => encodeURIComponent(encodeURIComponent(k));
+  if (lagerItems.size > 0) {
+    url += '&lager=' + [...lagerItems].map(enc2).join(',');
+  }
+  if (truckItems.size > 0) {
+    url += '&truck=' + [...truckItems].map(enc2).join(',');
+  }
+
+  // Encode checked checklist items
+  if (checked.size > 0) {
+    url += '&ticked=' + [...checked].map(enc2).join(',');
+  }
+
+  // Encode Çiğ Köfte Masse Auswahl
+  if (!cigKofteMasseSelbst) {
+    url += '&masse=kaufen';
+  }
+
+  // Encode eigene Elemente
+  if (customItems.length > 0) {
+    url += '&custom=' + customItems.map(c => enc2(c.name) + '~' + enc2(c.qty) + '~' + enc2(c.vendor)).join(',');
+  }
+
+  // Encode Vendor-Verschiebungen
+  const redirKeys = Object.keys(itemRedirects);
+  if (redirKeys.length > 0) {
+    url += '&redir=' + redirKeys.map(k => enc2(k) + '~' + enc2(itemRedirects[k])).join(',');
+  }
+
+  navigator.clipboard.writeText(url).then(() => {
+    const toast = document.getElementById('share-toast');
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2500);
+  }).catch(() => {
+    prompt('Link kopieren:', url);
+  });
+}
+
+function loadFromURL() {
+  const params = new URLSearchParams(window.location.search);
+  const list = params.get('list');
+  if (!list) return false;
+
+  // Restore dish selections
+  list.split(',').forEach(part => {
+    const [name, portions] = part.split(':');
+    const decoded = decodeURIComponent(name);
+    if (selections[decoded] !== undefined) {
+      selections[decoded].active = true;
+      selections[decoded].portions = parseInt(portions) || BASE[decoded].base;
+    }
+  });
+
+  // Restore lager + truck items (URLSearchParams hat bereits einmal decodiert,
+  // Kommas in Namen sind noch als %2C geschützt)
+  const lagerParam = params.get('lager');
+  if (lagerParam) lagerParam.split(',').forEach(k => lagerItems.add(decodeURIComponent(k)));
+  const truckParam = params.get('truck');
+  if (truckParam) truckParam.split(',').forEach(k => truckItems.add(decodeURIComponent(k)));
+
+  // Restore checked checklist items
+  const tickedParam = params.get('ticked');
+  if (tickedParam) {
+    tickedParam.split(',').forEach(k => checked.add(decodeURIComponent(k)));
+  }
+
+  // Restore Çiğ Köfte Masse Auswahl
+  if (params.get('masse') === 'kaufen') cigKofteMasseSelbst = false;
+
+  // Restore eigene Elemente
+  const customParam = params.get('custom');
+  if (customParam) {
+    customParam.split(',').forEach(triple => {
+      const [n, q, v] = triple.split('~');
+      if (n && v) customItems.push({ name: decodeURIComponent(n), qty: decodeURIComponent(q||'—'), vendor: decodeURIComponent(v) });
+    });
+  }
+
+  // Restore Vendor-Verschiebungen
+  const redirParam = params.get('redir');
+  if (redirParam) {
+    redirParam.split(',').forEach(pair => {
+      const [k, v] = pair.split('~');
+      if (k && v) itemRedirects[decodeURIComponent(k)] = decodeURIComponent(v);
+    });
+  }
+
+  return true;
+}
+
+function renderChecklist() {
+  const container = document.getElementById('checklist-items');
+  const dynamic = getDynamicItems();
+  const active = dishNames.filter(n => selections[n].active && selections[n].portions > 0);
+  const total = STATIC_ITEMS.length + dynamic.length;
+  const VS = 'Verbrauchsmaterial';
+  let html = '';
+  const doneAll = [];
+
+  function itemRow(name, isLager, isTruck, extraLabel, redirect, qty) {
+    const currentShop = redirect || VS;
+    const redirectBadge = redirect ? `<span class="redirect-badge">verschoben von Lager</span>` : '';
+    const safeName = name.replace(/'/g, "\\'");
+    const safeQty = (qty||'—').replace(/'/g, "\\'");
+    return `<div class="shop-item">
+      <div class="shop-item-name">${name}${extraLabel||''}${redirectBadge}</div>
+      <div class="item-checks">
+        <div class="item-check-wrap${isLager?' checked':''}" onclick="toggleLagerItem('${VS}','${safeName}')">
+          <div class="item-check-box${isLager?' checked-lager':''}">✓</div>
+          <span class="item-check-label">Bestellt/<br>Im Lager</span>
+        </div>
+        <div class="item-check-wrap${isTruck?' checked':''}" onclick="toggleTruckItem('${VS}','${safeName}')">
+          <div class="item-check-box${isTruck?' checked-truck':''}">✓</div>
+          <span class="item-check-label">Im Truck</span>
+        </div>
+        <button class="redirect-btn" onclick="openRedirectModal('${VS}','${safeName}','${safeQty}','${currentShop}')">🔀</button>
+      </div>
+    </div>`;
+  }
+
+  function doneRow(name, extraLabel, shop, label2) {
+    const s = shop || VS;
+    const l2 = label2 || 'Im Truck';
+    const safeName = name.replace(/'/g, "\\'");
+    const safeShop = s.replace(/'/g, "\\'");
+    return `<div class="shop-item" style="opacity:0.6;text-decoration:line-through;color:var(--text-muted)">
+      <div class="shop-item-name">${name}${extraLabel||''}</div>
+      <div class="item-checks">
+        <div class="item-check-wrap" onclick="toggleLagerItem('${safeShop}','${safeName}')">
+          <div class="item-check-box checked-lager">✓</div>
+          <span class="item-check-label">Bestellt/<br>Im Lager</span>
+        </div>
+        <div class="item-check-wrap" onclick="toggleTruckItem('${safeShop}','${safeName}')">
+          <div class="item-check-box checked-truck">✓</div>
+          <span class="item-check-label">${l2}</span>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  // Çiğ Köfte Masse (fertig kaufen) — show at top of Lager section
+  if (active && active.includes && active.includes("Çiğ Köfte") && !cigKofteMasseSelbst) {
+    const factor = selections["Çiğ Köfte"].portions / 35;
+    const masseQty = (5 * factor).toFixed(1);
+    html += `<div class="shop-item" style="border-left:3px solid var(--orange)">
+      <div class="shop-item-name">📦 Çiğ Köfte Masse (fertig) <span class="shop-item-qty">${masseQty} kg</span></div>
+      <div class="item-checks">
+        <div class="item-check-wrap${lagerItems.has('Verbrauchsmaterial|Çiğ Köfte Masse')?' checked':''}" onclick="toggleLagerItem('Verbrauchsmaterial','Çiğ Köfte Masse')">
+          <div class="item-check-box${lagerItems.has('Verbrauchsmaterial|Çiğ Köfte Masse')?' checked-lager':''}">✓</div>
+          <span class="item-check-label">Bestellt/<br>Im Lager</span>
+        </div>
+        <div class="item-check-wrap${truckItems.has('Verbrauchsmaterial|Çiğ Köfte Masse')?' checked':''}" onclick="toggleTruckItem('Verbrauchsmaterial','Çiğ Köfte Masse')">
+          <div class="item-check-box${truckItems.has('Verbrauchsmaterial|Çiğ Köfte Masse')?' checked-truck':''}">✓</div>
+          <span class="item-check-label">Im Truck</span>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  // Vendor-Items die zu "Lager" verschoben wurden
+  lagerRedirectedItems.forEach(({item, qty, unit, originalShop, customQty, custom}) => {
+    const bkey = 'Lager|' + item;
+    const isLg = lagerItems.has(bkey);
+    const isTr = truckItems.has(bkey);
+    const safeName = item.replace(/'/g, "\\'");
+    const safeOrig = (originalShop||'').replace(/'/g, "\\'");
+    const qtyStr = custom ? customQty : fmt(qty, unit);
+    if (isLg && isTr) {
+      doneAll.push({ name: item, extra: ` (${qtyStr})`, shop: 'Lager' });
+      return;
+    }
+    html += `<div class="shop-item">
+      <div class="shop-item-name">${item} <span class="shop-item-qty">${qtyStr}</span> ${custom ? `<span class="redirect-badge">eigenes Element</span>` : `<span class="redirect-badge">verschoben von ${originalShop}</span>`}</div>
+      <div class="item-checks">
+        <div class="item-check-wrap${isLg?' checked':''}" onclick="toggleLagerItem('Lager','${safeName}')">
+          <div class="item-check-box${isLg?' checked-lager':''}">✓</div>
+          <span class="item-check-label">Bestellt/<br>Im Lager</span>
+        </div>
+        <div class="item-check-wrap${isTr?' checked':''}" onclick="toggleTruckItem('Lager','${safeName}')">
+          <div class="item-check-box${isTr?' checked-truck':''}">✓</div>
+          <span class="item-check-label">Im Truck</span>
+        </div>
+        ${custom
+          ? `<button class="redirect-btn" onclick="removeCustomItem('${safeName}','Lager')">✕</button>`
+          : `<button class="redirect-btn" onclick="openRedirectModal('${safeOrig}','${safeName}','${qtyStr.replace(/'/g,"\\'")}','Lager')">🔀</button>`}
+      </div>
+    </div>`;
+  });
+
+  // Dynamic items
+  dynamic.forEach(({key, label, count}) => {
+    const isLager = lagerItems.has(VS+'|'+label);
+    const isTruck = truckItems.has(VS+'|'+label);
+    const countLabel = count > 0
+      ? `<span class="dyn-count">${count} Stück</span>`
+      : `<span class="dyn-count dyn-count--empty">—</span>`;
+    if (isLager && isTruck) {
+      doneAll.push({ name: label, extra: count > 0 ? ` (${count} Stück)` : '' });
+      return;
+    }
+    const redirect = itemRedirects[VS+'|'+label];
+    // If redirected to another vendor, don't show in Lager section
+    if (redirect && redirect !== VS) return;
+    const qtyStr = count > 0 ? count + ' Stück' : '—';
+    html += itemRow(label, isLager, isTruck, countLabel, redirect, qtyStr);
+  });
+
+  // Static items
+  STATIC_ITEMS.forEach((item) => {
+    const isLager = lagerItems.has(VS+'|'+item);
+    const isTruck = truckItems.has(VS+'|'+item);
+    if (isLager && isTruck) {
+      doneAll.push({ name: item, extra: '' });
+      return;
+    }
+    const redirect = itemRedirects[VS+'|'+item];
+    // If redirected to another vendor, don't show in Lager section
+    if (redirect && redirect !== VS) return;
+    html += itemRow(item, isLager, isTruck, '', redirect, '—');
+  });
+
+  // All done items — Vendor + Verbrauchsmaterial + Back-Kitchen together at the very bottom
+  backKitchenDone.forEach(e => doneAll.push(e));
+  const totalDone = doneItems.length + doneAll.length;
+  if (totalDone > 0) {
+    html += `<div style="background:#4caf50;color:white;font-size:13px;font-weight:600;padding:8px 14px;margin-top:4px">✅ Bereits erledigt (${totalDone})</div>`;
+    // Vendor items
+    doneItems.forEach(({item, qty, unit, shop, customQty, custom}) => {
+      const safeShop = shop.replace(/'/g, "\'");
+      const safeItem = item.replace(/'/g, "\'");
+      html += `<div class="shop-item" style="opacity:0.6;text-decoration:line-through;color:var(--text-muted)">
+        <span class="shop-item-name">${item} <span style="font-size:11px;color:var(--text-subtle)">(${shop})</span></span>
+        <span class="shop-item-qty">${custom ? customQty : fmt(qty, unit)}</span>
+        <div class="item-checks">
+          <div class="item-check-wrap" onclick="toggleLagerItem('${safeShop}','${safeItem}')">
+            <div class="item-check-box checked-lager">✓</div>
+            <span class="item-check-label">Bestellt/<br>Im Lager</span>
+          </div>
+          <div class="item-check-wrap" onclick="toggleTruckItem('${safeShop}','${safeItem}')">
+            <div class="item-check-box checked-truck">✓</div>
+            <span class="item-check-label">Im Truck</span>
+          </div>
+        </div>
+      </div>`;
+    });
+    // Verbrauchsmaterial items
+    doneAll.forEach(({name, extra, shop, label2}) => { html += doneRow(name, extra, shop, label2); });
+  }
+
+  container.innerHTML = html;
+  document.getElementById('check-count').textContent = `${doneAll.length} / ${total}`;
+}
+function toggleCheckKey(key) {
+  if (checked.has(key)) checked.delete(key); else checked.add(key);
+  renderChecklist();
+}
+
+function toggleCheck(i) { toggleCheckKey('s_' + i); }
+
+function resetChecks() { checked.clear(); renderChecklist(); }
+
+
+
+
+
+function toggleChecklist() {
+  checklistOpen = !checklistOpen;
+  document.getElementById('checklist-items').classList.toggle('collapsed', !checklistOpen);
+  document.getElementById('chevron').className = 'chevron' + (checklistOpen ? ' open' : '');
+}
+
+function requestBackoffice() {
+  const modal = document.getElementById('pw-modal');
+  modal.style.display = 'flex';
+  document.getElementById('pw-input').value = '';
+  document.getElementById('pw-error').style.display = 'none';
+  setTimeout(() => document.getElementById('pw-input').focus(), 50);
+}
+
+function closePWModal() {
+  document.getElementById('pw-modal').style.display = 'none';
+}
+
+function checkPW() {
+  const val = document.getElementById('pw-input').value;
+  if (val === '111222') {
+    closePWModal();
+    // Switch to planner mode
+    document.getElementById('readonly-banner').style.display = 'flex';
+    document.getElementById('banner-text').textContent = '⚙️ Backoffice-Modus — Gerichte und Portionen anpassen';
+    document.getElementById('dishes').style.display = 'grid';
+    document.querySelector('.section-label').style.display = 'block';
+    document.getElementById('backoffice-link').style.display = 'none';
+    document.getElementById('back-to-shopping-btn').style.display = 'inline';
+    // Clean URL
+    try { window.history.replaceState({}, '', window.location.pathname); } catch(e) {}
+  } else {
+    document.getElementById('pw-error').style.display = 'block';
+    document.getElementById('pw-input').value = '';
+    document.getElementById('pw-input').focus();
+  }
+}
+
+// Close modal on backdrop click
+document.getElementById('pw-modal').addEventListener('click', function(e) {
+  if (e.target === this) closePWModal();
+});
+
+// Load from URL if shared link
+const isShared = loadFromURL();
+if (isShared) {
+  document.getElementById('dishes').style.display = 'none';
+  document.querySelector('.section-label').style.display = 'none';
+  document.getElementById('readonly-banner').style.display = 'flex';
+}
+
+renderDishes();
+renderResult();
+renderChecklist();
+</script>
+
+
+</body></html>
