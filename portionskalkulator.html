@@ -748,7 +748,7 @@
   <div class="logo">🥙</div>
   <div class="header-text">
     <h1>Bauch-Laden Food-Truck</h1>
-    <p>Portionskalkulator &amp; Einkaufsliste <span style="opacity:0.6;font-size:11px;">v4.7</span></p>
+    <p>Portionskalkulator &amp; Einkaufsliste <span style="opacity:0.6;font-size:11px;">v4.8</span></p>
   </div>
 </header>
 <div class="readonly-banner" id="readonly-banner">
@@ -1763,18 +1763,24 @@ function computeShortages() {
     addNeed("Gouda", 2000*kf, "g");
   }
 
-  // Reine Gegenüberstellung — keine Bewertung, da Einheiten unterschiedlich sein können
+  // Reine Gegenüberstellung — ALLE Bedarfspositionen, auch ohne Eintrag in der Bestandsaufnahme
   Object.keys(need).forEach(n => {
     const st = stockMap[n];
-    if (!st) return;                          // kein Namens-Match -> überspringen
-    const haveTxt = st.rawMenge !== ''
-      ? (st.pack ? st.rawMenge + ' × ' + st.pack : st.rawMenge)
-      : '—';
+    let haveTxt, missing = false;
+    if (!st) {
+      haveTxt = 'nicht in Bestandsaufnahme';
+      missing = true;
+    } else if (st.rawMenge === '') {
+      haveTxt = st.pack ? '— × ' + st.pack : '—';
+    } else {
+      haveTxt = st.pack ? st.rawMenge + ' × ' + st.pack : st.rawMenge;
+    }
     stockCompare.push({
       item: need[n].item,
       needTxt: fmt(need[n].qty, need[n].unit),
       haveTxt,
-      stockName: st.raw
+      missing,
+      stockName: st ? st.raw : ''
     });
   });
   stockCompare.sort((a,b) => a.item.localeCompare(b.item, 'de'));
@@ -1783,10 +1789,11 @@ function computeShortages() {
 function renderStockResult() {
   const body = document.getElementById('stock-modal-body');
   if (!stockData) return;
-  let html = `<p style="font-size:12px;color:var(--text-muted);margin-bottom:10px">${stockData.length} Positionen im Food-Truck-Bestand gelesen · ${stockCompare.length} davon zugeordnet.</p>`;
+  const missingCount = stockCompare.filter(s => s.missing).length;
+  let html = `<p style="font-size:12px;color:var(--text-muted);margin-bottom:10px">${stockCompare.length} Bedarfspositionen · ${stockCompare.length - missingCount} in der Bestandsaufnahme gefunden.</p>`;
 
   if (stockCompare.length === 0) {
-    html += '<p style="font-size:13px;color:var(--text-muted)">Keine Zutat konnte zugeordnet werden.</p>';
+    html += '<p style="font-size:13px;color:var(--text-muted)">Kein Bedarf — bitte zuerst Gerichte auswählen.</p>';
   } else {
     html += `<div style="display:grid;grid-template-columns:1fr 80px 150px;gap:6px;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;padding:6px 0;border-bottom:1.5px solid var(--border)">
       <div>Zutat</div><div style="text-align:right">Nötig</div><div style="text-align:right">Bestand</div>
@@ -1795,7 +1802,7 @@ function renderStockResult() {
       html += `<div style="display:grid;grid-template-columns:1fr 80px 150px;gap:6px;font-size:12.5px;padding:6px 0;border-bottom:1px solid var(--border-light);align-items:center">
         <div>${s.item}</div>
         <div style="font-family:'DM Mono',monospace;text-align:right;white-space:nowrap">${s.needTxt}</div>
-        <div style="font-family:'DM Mono',monospace;text-align:right;color:var(--orange);font-size:11.5px;line-height:1.3">${s.haveTxt}</div>
+        <div style="font-family:${s.missing ? 'inherit' : "'DM Mono',monospace"};text-align:right;color:${s.missing ? 'var(--text-subtle)' : 'var(--orange)'};font-size:11.5px;line-height:1.3">${s.haveTxt}</div>
       </div>`;
     });
     html += '<p style="font-size:11.5px;color:var(--text-muted);margin-top:10px">Bestand steht in Gebinden laut Bestandsaufnahme — bitte selbst gegen den Bedarf abwägen.</p>';
