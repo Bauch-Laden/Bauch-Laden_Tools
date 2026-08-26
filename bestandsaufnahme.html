@@ -67,9 +67,9 @@ header {
 .lager-header { display: grid; grid-template-columns: 160px 1fr 140px 90px 90px 44px; background: var(--bg); border-bottom: 1.5px solid var(--border); padding: 8px 14px; font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; }
 .lager-row { display: grid; grid-template-columns: 160px 1fr 140px 90px 90px 44px; align-items: center; padding: 0 14px; border-bottom: 1px solid var(--border-light); min-height: 52px; }
 
-/* TRUCK: Zutat | Verpackung | Menge | btn */
-.truck-header { display: grid; grid-template-columns: 1fr 200px 120px 44px; background: var(--bg); border-bottom: 1.5px solid var(--border); padding: 8px 14px; font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; }
-.truck-row { display: grid; grid-template-columns: 1fr 200px 120px 44px; align-items: center; padding: 0 14px; border-bottom: 1px solid var(--border-light); min-height: 52px; }
+/* TRUCK/BACK/BF: Zutat | Verpackung | Menge | Eisenmenge | btn */
+.truck-header { display: grid; grid-template-columns: 1fr 150px 90px 90px 44px; background: var(--bg); border-bottom: 1.5px solid var(--border); padding: 8px 14px; font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; }
+.truck-row { display: grid; grid-template-columns: 1fr 150px 90px 90px 44px; align-items: center; padding: 0 14px; border-bottom: 1px solid var(--border-light); min-height: 52px; }
 
 .table-row:last-child { border-bottom: none; }
 .table-row.low { background: var(--red-light); }
@@ -159,7 +159,7 @@ header {
 <header>
   <div class="logo">📦</div>
   <div class="header-text">
-    <h1>Bauch-Laden Bestandsaufnahme <span class="version">v3.3</span></h1>
+    <h1>Bauch-Laden Bestandsaufnahme <span class="version">v3.4</span></h1>
     <p id="last-sync">Noch nicht synchronisiert</p>
   </div>
   <div class="header-right">
@@ -184,9 +184,11 @@ header {
   </button>
   <button class="tab-btn" onclick="switchTab('back')" id="tab-back">
     <span class="tab-icon">🏠</span> Back-Kitchen
+    <span class="tab-badge" id="badge-back"></span>
   </button>
   <button class="tab-btn" onclick="switchTab('bf')" id="tab-bf">
     <span class="tab-icon">🔥</span> B&amp;F
+    <span class="tab-badge" id="badge-bf"></span>
   </button>
 </div>
 
@@ -332,7 +334,7 @@ const BACK_NAMES = [
   "GN 1/4 Behälter & Deckel","Isolier Box"
 ];
 function buildBackData(names) {
-  return names.map(name => ({ name, pack: '', menge: '' }));
+  return names.map(name => ({ name, pack: '', menge: '', eisen: '' }));
 }
 
 let bfData = [];
@@ -384,7 +386,7 @@ const BF_ITEMS = [
   ["Mitarbeiter Wasser ohne","Flasche Stück"]
 ];
 function buildBfData() {
-  return BF_ITEMS.map(([name, pack]) => ({ name, pack, menge: '' }));
+  return BF_ITEMS.map(([name, pack]) => ({ name, pack, menge: '', eisen: '' }));
 }
 let lagerData = JSON.parse(JSON.stringify(LAGER_DEFAULT));
 let tokenClient = null;
@@ -400,7 +402,7 @@ let dataLoaded = false;
 function buildTruckData(names) {
   return names.map(name => {
     const lagerMatch = lagerData.find(l => l.name.toLowerCase() === name.toLowerCase());
-    return { name, pack: lagerMatch ? lagerMatch.pack : '', menge: '' };
+    return { name, pack: lagerMatch ? lagerMatch.pack : '', menge: '', eisen: '' };
   });
 }
 
@@ -440,7 +442,7 @@ async function loadBothTabs() {
 async function loadTab(tab) {
   try {
     const sheetName = tab === 'truck' ? 'Food-Truck' : (tab === 'back' ? 'Back-Kitchen' : (tab === 'bf' ? 'B&F' : 'Lager'));
-    const cols = tab === 'lager' ? 'A2:G500' : 'A2:D500';
+    const cols = tab === 'lager' ? 'A2:G500' : 'A2:E500';
     const resp = await fetch(
       `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(sheetName)}!${cols}`,
       { headers: { Authorization: `Bearer ${accessToken}` } }
@@ -451,7 +453,7 @@ async function loadTab(tab) {
       if (tab === 'truck' || tab === 'back' || tab === 'bf') {
         const seen = new Set();
         const parsed = data.values
-          .map(r => ({ name:r[0]||'', pack:r[1]||'', menge:r[2]||'', archived: r[3]==='ja' }))
+          .map(r => ({ name:r[0]||'', pack:r[1]||'', menge:r[2]||'', eisen:r[3]||'', archived: r[4]==='ja' }))
           .filter(r => { if (!r.name || seen.has(r.name)) return false; seen.add(r.name); return true; });
         if (tab === 'truck') truckData = parsed;
         else if (tab === 'back') backData = parsed;
@@ -486,11 +488,11 @@ async function initSheet(tab) {
   const sheetName = tab === 'truck' ? 'Food-Truck' : (tab === 'back' ? 'Back-Kitchen' : (tab === 'bf' ? 'B&F' : 'Lager'));
   let values;
   if (tab === 'truck') {
-    values = [['Zutat','Verpackung','Menge','Archiviert'], ...truckData.map(r=>[r.name,r.pack||'',r.menge||'',r.archived?'ja':''])];
+    values = [['Zutat','Verpackung','Menge','Eisenmenge','Archiviert'], ...truckData.map(r=>[r.name,r.pack||'',r.menge||'',r.eisen||'',r.archived?'ja':''])];
   } else if (tab === 'back') {
-    values = [['Zutat','Verpackung','Menge','Archiviert'], ...backData.map(r=>[r.name,r.pack||'',r.menge||'',r.archived?'ja':''])];
+    values = [['Zutat','Verpackung','Menge','Eisenmenge','Archiviert'], ...backData.map(r=>[r.name,r.pack||'',r.menge||'',r.eisen||'',r.archived?'ja':''])];
   } else if (tab === 'bf') {
-    values = [['Zutat','Verpackung','Menge','Archiviert'], ...bfData.map(r=>[r.name,r.pack||'',r.menge||'',r.archived?'ja':''])];
+    values = [['Zutat','Verpackung','Menge','Eisenmenge','Archiviert'], ...bfData.map(r=>[r.name,r.pack||'',r.menge||'',r.eisen||'',r.archived?'ja':''])];
   } else {
     values = [['Zutat','Vendor','Verpackung','Menge','Eisenmenge','Archiviert'], ...lagerData.map(r=>[r.name,r.vendor||'',r.pack||'',r.menge||'',r.eisen||'',r.archived?'ja':''])];
   }
@@ -509,20 +511,20 @@ async function saveToSheets(silent = false) {
     const sortedBack = [...backData].sort((a,b) => a.name.localeCompare(b.name, 'de'));
     const sortedBf = [...bfData].sort((a,b) => a.name.localeCompare(b.name, 'de'));
     const truckValues = [
-      ['Zutat','Verpackung','Menge','Archiviert'],
-      ...sortedTruck.map(r=>[r.name,r.pack||'',r.menge||'',r.archived?'ja':''])
+      ['Zutat','Verpackung','Menge','Eisenmenge','Archiviert'],
+      ...sortedTruck.map(r=>[r.name,r.pack||'',r.menge||'',r.eisen||'',r.archived?'ja':''])
     ];
     const lagerValues = [
       ['Zutat','Vendor','Verpackung','Menge','Eisenmenge','Archiviert'],
       ...sortedLager.map(r=>[r.name,r.vendor||'',r.pack||'',r.menge||'',r.eisen||'',r.archived?'ja':''])
     ];
     const backValues = [
-      ['Zutat','Verpackung','Menge','Archiviert'],
-      ...sortedBack.map(r=>[r.name,r.pack||'',r.menge||'',r.archived?'ja':''])
+      ['Zutat','Verpackung','Menge','Eisenmenge','Archiviert'],
+      ...sortedBack.map(r=>[r.name,r.pack||'',r.menge||'',r.eisen||'',r.archived?'ja':''])
     ];
     const bfValues = [
-      ['Zutat','Verpackung','Menge','Archiviert'],
-      ...sortedBf.map(r=>[r.name,r.pack||'',r.menge||'',r.archived?'ja':''])
+      ['Zutat','Verpackung','Menge','Eisenmenge','Archiviert'],
+      ...sortedBf.map(r=>[r.name,r.pack||'',r.menge||'',r.eisen||'',r.archived?'ja':''])
     ];
     await Promise.all([
       writeSheet('Food-Truck', truckValues),
@@ -593,27 +595,22 @@ function closePWModal() { document.getElementById('pw-modal').classList.remove('
 
 function renderAddRow() {
   const f = document.getElementById('add-row-fields');
-  if (currentTab !== 'lager') {
-    f.innerHTML = `
-      <input class="add-input" id="new-name" placeholder="Neue Zutat..." onkeydown="if(event.key==='Enter')addRow()">
-      <input class="add-input" id="new-pack" placeholder="Verpackung..." style="max-width:150px" onkeydown="if(event.key==='Enter')addRow()">
-      <button class="add-btn" onclick="addRow()">+ Hinzufügen</button>`;
-  } else {
-    f.innerHTML = `
-      <input class="add-input" id="new-name" placeholder="Neue Zutat..." onkeydown="if(event.key==='Enter')addRow()">
-      <input class="add-input" id="new-pack" placeholder="Verpackung..." style="max-width:130px" onkeydown="if(event.key==='Enter')addRow()">
-      <input class="add-input" id="new-eisen" placeholder="Eisenmenge..." style="max-width:120px" onkeydown="if(event.key==='Enter')addRow()">
-      <button class="add-btn" onclick="addRow()">+ Hinzufügen</button>`;
-  }
+  f.innerHTML = `
+    <input class="add-input" id="new-name" placeholder="Neue Zutat..." onkeydown="if(event.key==='Enter')addRow()">
+    <input class="add-input" id="new-pack" placeholder="Verpackung..." style="max-width:130px" onkeydown="if(event.key==='Enter')addRow()">
+    <input class="add-input" id="new-eisen" placeholder="Eisenmenge..." style="max-width:120px" onkeydown="if(event.key==='Enter')addRow()">
+    <button class="add-btn" onclick="addRow()">+ Hinzufügen</button>`;
 }
 
 function addRow() {
   const name = document.getElementById('new-name').value.trim();
   if (!name) return;
+  const pack = document.getElementById('new-pack').value.trim();
+  const eisen = document.getElementById('new-eisen').value.trim();
   if (currentTab !== 'lager') {
-    getData().push({ name, pack: document.getElementById('new-pack').value.trim(), menge:'' });
+    getData().push({ name, pack, menge:'', eisen });
   } else {
-    lagerData.push({ name, vendor:'', pack: document.getElementById('new-pack').value.trim(), menge:'', eisen: document.getElementById('new-eisen').value.trim() });
+    lagerData.push({ name, vendor:'', pack, menge:'', eisen });
   }
   document.getElementById('new-name').value = '';
   document.querySelectorAll('.add-row input').forEach(i => i.value='');
@@ -653,11 +650,11 @@ function editRow() {
 
   const isLager = currentTab === 'lager';
   document.getElementById('edit-vendor-field').style.display = isLager ? 'block' : 'none';
-  document.getElementById('edit-eisen-field').style.display = isLager ? 'block' : 'none';
+  document.getElementById('edit-eisen-field').style.display = 'block';
+  document.getElementById('edit-eisen').value = row.eisen || '';
 
   if (isLager) {
     editVendors = (row.vendor || '').split(',').map(v => v.trim()).filter(Boolean);
-    document.getElementById('edit-eisen').value = row.eisen || '';
     renderEditVendorPills();
   }
   document.getElementById('edit-modal').classList.add('open');
@@ -682,9 +679,9 @@ function confirmEdit() {
   const row = getData()[editIndex];
   row.name = document.getElementById('edit-name').value.trim() || row.name;
   row.pack = document.getElementById('edit-pack').value.trim();
+  row.eisen = document.getElementById('edit-eisen').value.trim();
   if (currentTab === 'lager') {
     row.vendor = editVendors.join(', ');
-    row.eisen = document.getElementById('edit-eisen').value.trim();
   }
   closeEditModal(); render();
 }
@@ -778,27 +775,32 @@ function updateLastSync() {
 
 function render() {
   const data = getData();
-  const isTruck = currentTab !== 'lager';
-  const lowCount = isTruck ? 0 : data.filter(r => isLow(r)).length;
+  const isTruck = currentTab !== 'lager'; // "isTruck" = vereinfachtes Layout ohne Vendor-Spalte (Food-Truck/Back-Kitchen/BF)
+  const lowCount = data.filter(r => isLow(r)).length;
 
-  // Badges
-  const lLow = lagerData.filter(r => isLow(r)).length;
-  document.getElementById('badge-truck').textContent = '';
-  document.getElementById('badge-truck').className = 'tab-badge';
-  document.getElementById('badge-lager').textContent = lLow;
-  document.getElementById('badge-lager').className = 'tab-badge' + (lLow ? ' show' : '');
+  // Badges — jeder Tab zeigt unabhängig vom aktuell offenen Tab seine eigene Anzahl "unter Eisenmenge"
+  const badgeCounts = {
+    truck: truckData.filter(r => isLow(r)).length,
+    lager: lagerData.filter(r => isLow(r)).length,
+    back: backData.filter(r => isLow(r)).length,
+    bf: bfData.filter(r => isLow(r)).length,
+  };
+  Object.entries(badgeCounts).forEach(([tab, count]) => {
+    const el = document.getElementById('badge-' + tab);
+    if (!el) return;
+    el.textContent = count;
+    el.className = 'tab-badge' + (count ? ' show' : '');
+  });
 
-  // Stats
-  document.getElementById('stats-bar').innerHTML = isTruck
-    ? `<div class="stat-card"><div class="stat-val">${data.length}</div><div class="stat-label">Zutaten</div></div>
-       <div class="stat-card"><div class="stat-val">${data.filter(r=>r.menge).length}</div><div class="stat-label">Erfasst</div></div>`
-    : `<div class="stat-card"><div class="stat-val">${data.length}</div><div class="stat-label">Zutaten</div></div>
-       <div class="stat-card${lowCount>0?' red':''}"><div class="stat-val">${lowCount}</div><div class="stat-label">Unter Eisenmenge</div></div>
-       <div class="stat-card"><div class="stat-val">${data.filter(r=>r.menge).length}</div><div class="stat-label">Erfasst</div></div>`;
+  // Stats — einheitlich für alle vier Tabs
+  document.getElementById('stats-bar').innerHTML = `
+    <div class="stat-card"><div class="stat-val">${data.length}</div><div class="stat-label">Zutaten</div></div>
+    <div class="stat-card${lowCount>0?' red':''}"><div class="stat-val">${lowCount}</div><div class="stat-label">Unter Eisenmenge</div></div>
+    <div class="stat-card"><div class="stat-val">${data.filter(r=>r.menge).length}</div><div class="stat-label">Erfasst</div></div>`;
 
   // Header
   document.getElementById('table-header').innerHTML = isTruck
-    ? `<div class="truck-header"><div>Zutat</div><div style="text-align:center">Verpackung</div><div style="text-align:center">Menge</div><div></div></div>`
+    ? `<div class="truck-header"><div>Zutat</div><div style="text-align:center">Verpackung</div><div style="text-align:center">Menge</div><div style="text-align:center">Eisenmenge</div><div></div></div>`
     : `<div class="lager-header"><div>Zutat</div><div class="lager-vendor">Vendor</div><div style="text-align:center">Verpackung</div><div style="text-align:center">Menge</div><div style="text-align:center">Eisenmenge</div><div></div></div>`;
 
   // Rows — exclude archived, sort alphabetically
@@ -806,16 +808,20 @@ function render() {
     .filter(({row}) => !row.archived)
     .sort((a, b) => a.row.name.localeCompare(b.row.name, 'de'));
   document.getElementById('table-body').innerHTML = activeData.map(({row, i}) => {
-    const low = !isTruck && isLow(row);
+    const low = isLow(row);
     const lowBadge = low ? `<span class="low-badge">⚠ Nachbestellen</span>` : '';
     const ctxBtn = isBO ? `<button class="ctx-btn" onclick="openCtx(${i},'${row.name.replace(/'/g,"\\'")}',this)">···</button>` : `<div></div>`;
+    const eisenDisplay = (isBO || !row.eisen)
+      ? `<input class="cell-input eisen" value="${esc(row.eisen)}" placeholder="min." oninput="getData()[${i}].eisen=this.value;render();scheduleAutosave()">`
+      : `<div class="cell-val" style="color:var(--red)">${esc(row.eisen)}</div>`;
 
     if (isTruck) {
       const packVal = row.pack ? `<div class="cell-val">${esc(row.pack)}</div>` : `<div class="cell-val" style="color:var(--text-subtle)">—</div>`;
       return `<div class="truck-row table-row${low?' low':''}">
         <div class="item-name-cell"><span class="item-name-text">${esc(row.name)} ${lowBadge}</span></div>
         ${packVal}
-        <input class="cell-input menge" value="${esc(row.menge)}" placeholder="0" oninput="getData()[${i}].menge=this.value;scheduleAutosave()">
+        <input class="cell-input menge" value="${esc(row.menge)}" placeholder="0" oninput="getData()[${i}].menge=this.value;render();scheduleAutosave()">
+        ${eisenDisplay}
         ${ctxBtn}
       </div>`;
     } else {
@@ -823,9 +829,6 @@ function render() {
       const packDisplay = (isBO || !row.pack)
         ? `<input class="cell-input" value="${esc(row.pack)}" placeholder="z.B. 750ml" oninput="getData()[${i}].pack=this.value;scheduleAutosave()">`
         : `<div class="cell-val">${esc(row.pack)}</div>`;
-      const eisenDisplay = (isBO || !row.eisen)
-        ? `<input class="cell-input eisen" value="${esc(row.eisen)}" placeholder="min." oninput="getData()[${i}].eisen=this.value;render();scheduleAutosave()">`
-        : `<div class="cell-val" style="color:var(--red)">${esc(row.eisen)}</div>`;
       return `<div class="lager-row table-row${low?' low':''}">
         <div class="item-name-cell">
           <span class="item-name-text">${esc(row.name)} ${lowBadge}</span>
@@ -833,7 +836,7 @@ function render() {
         </div>
         <div class="lager-vendor" style="font-size:12px;color:var(--text-muted);padding:4px">${esc(row.vendor||'—')}</div>
         ${packDisplay}
-        <input class="cell-input menge" value="${esc(row.menge)}" placeholder="0" oninput="getData()[${i}].menge=this.value;scheduleAutosave()">
+        <input class="cell-input menge" value="${esc(row.menge)}" placeholder="0" oninput="getData()[${i}].menge=this.value;render();scheduleAutosave()">
         ${eisenDisplay}
         ${ctxBtn}
       </div>`;
