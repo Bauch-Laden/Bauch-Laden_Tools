@@ -159,7 +159,7 @@ header {
 <header>
   <div class="logo">📦</div>
   <div class="header-text">
-    <h1>Bauch-Laden Bestandsaufnahme <span class="version">v3.4</span></h1>
+    <h1>Bauch-Laden Bestandsaufnahme <span class="version">v3.5</span></h1>
     <p id="last-sync">Noch nicht synchronisiert</p>
   </div>
   <div class="header-right">
@@ -442,26 +442,37 @@ async function loadBothTabs() {
 async function loadTab(tab) {
   try {
     const sheetName = tab === 'truck' ? 'Food-Truck' : (tab === 'back' ? 'Back-Kitchen' : (tab === 'bf' ? 'B&F' : 'Lager'));
-    const cols = tab === 'lager' ? 'A2:G500' : 'A2:E500';
+    // Ab Zeile 1 (inkl. Kopfzeile) laden — so lässt sich erkennen, ob dieses Tabellenblatt
+    // schon die neue "Eisenmenge"-Spalte hat oder noch die alte Struktur von vor dieser Funktion.
+    const cols = tab === 'lager' ? 'A1:G500' : 'A1:E500';
     const resp = await fetch(
       `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(sheetName)}!${cols}`,
       { headers: { Authorization: `Bearer ${accessToken}` } }
     );
     const data = await resp.json();
-    if (data.values && data.values.length) {
-      // Sheet has data — load from sheet, deduplicate by name
+    if (data.values && data.values.length > 1) {
+      const header = data.values[0];
+      const rows = data.values.slice(1);
       if (tab === 'truck' || tab === 'back' || tab === 'bf') {
+        // Neu: Zutat, Verpackung, Menge, Eisenmenge, Archiviert (5 Spalten)
+        // Alt (vor dieser Funktion): Zutat, Verpackung, Menge, Archiviert (4 Spalten, keine Eisenmenge)
+        const hatEisenmenge = header[3] === 'Eisenmenge';
         const seen = new Set();
-        const parsed = data.values
-          .map(r => ({ name:r[0]||'', pack:r[1]||'', menge:r[2]||'', eisen:r[3]||'', archived: r[4]==='ja' }))
+        const parsed = rows
+          .map(r => hatEisenmenge
+            ? { name:r[0]||'', pack:r[1]||'', menge:r[2]||'', eisen:r[3]||'', archived: r[4]==='ja' }
+            : { name:r[0]||'', pack:r[1]||'', menge:r[2]||'', eisen:'', archived: r[3]==='ja' })
           .filter(r => { if (!r.name || seen.has(r.name)) return false; seen.add(r.name); return true; });
         if (tab === 'truck') truckData = parsed;
         else if (tab === 'back') backData = parsed;
         else bfData = parsed;
       } else {
+        const hatEisenmenge = header[4] === 'Eisenmenge';
         const seen = new Set();
-        lagerData = data.values
-          .map(r => ({ name:r[0]||'', vendor:r[1]||'', pack:r[2]||'', menge:r[3]||'', eisen:r[4]||'', archived: r[5]==='ja' }))
+        lagerData = rows
+          .map(r => hatEisenmenge
+            ? { name:r[0]||'', vendor:r[1]||'', pack:r[2]||'', menge:r[3]||'', eisen:r[4]||'', archived: r[5]==='ja' }
+            : { name:r[0]||'', vendor:r[1]||'', pack:r[2]||'', menge:r[3]||'', eisen:'', archived: r[4]==='ja' })
           .filter(r => { if (!r.name || seen.has(r.name)) return false; seen.add(r.name); return true; });
       }
     } else {
@@ -767,6 +778,49 @@ function isLow(row) {
   const m = parseFloat(row.menge.replace(',','.')), e = parseFloat(row.eisen.replace(',','.'));
   return !isNaN(m) && !isNaN(e) && m < e;
 }
+
+// Wird beim Tippen in Menge/Eisenmenge aufgerufen — aktualisiert NUR die betroffene Zeile,
+// die Statistik-Leiste und die Tab-Badges, OHNE die Tabelle neu aufzubauen. Ein voller
+// render()-Aufruf würde dabei das gerade fokussierte Eingabefeld zerstören und den Cursor
+// verlieren — genau das Problem, das hier vermieden wird.
+function liveAktualisieren(i) {
+  const data = getData();
+  const row = data[i];
+  const low = isLow(row);
+  const rowEl = document.querySelector('.table-row[data-idx="' + i + '"]');
+  if (rowEl) {
+    rowEl.classList.toggle('low', low);
+    const nameSpan = rowEl.querySelector('.item-name-text');
+    let badge = nameSpan ? nameSpan.querySelector('.low-badge') : null;
+    if (low && !badge && nameSpan) {
+      nameSpan.insertAdjacentHTML('beforeend', ' <span class="low-badge">⚠ Nachbestellen</span>');
+    } else if (!low && badge) {
+      badge.remove();
+    }
+  }
+
+  const lowCount = data.filter(r => isLow(r)).length;
+  const redCard = document.querySelector('#stats-bar .stat-card:nth-child(2) .stat-val');
+  if (redCard) {
+    redCard.textContent = lowCount;
+    redCard.parentElement.classList.toggle('red', lowCount > 0);
+  }
+  const erfasstCard = document.querySelector('#stats-bar .stat-card:nth-child(3) .stat-val');
+  if (erfasstCard) erfasstCard.textContent = data.filter(r => r.menge).length;
+
+  const badgeCounts = {
+    truck: truckData.filter(r => isLow(r)).length,
+    lager: lagerData.filter(r => isLow(r)).length,
+    back: backData.filter(r => isLow(r)).length,
+    bf: bfData.filter(r => isLow(r)).length,
+  };
+  Object.entries(badgeCounts).forEach(([tab, count]) => {
+    const el = document.getElementById('badge-' + tab);
+    if (!el) return;
+    el.textContent = count;
+    el.className = 'tab-badge' + (count ? ' show' : '');
+  });
+}
 function esc(v) { return (v||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;'); }
 function updateLastSync() {
   const now = new Date();
@@ -812,15 +866,15 @@ function render() {
     const lowBadge = low ? `<span class="low-badge">⚠ Nachbestellen</span>` : '';
     const ctxBtn = isBO ? `<button class="ctx-btn" onclick="openCtx(${i},'${row.name.replace(/'/g,"\\'")}',this)">···</button>` : `<div></div>`;
     const eisenDisplay = (isBO || !row.eisen)
-      ? `<input class="cell-input eisen" value="${esc(row.eisen)}" placeholder="min." oninput="getData()[${i}].eisen=this.value;render();scheduleAutosave()">`
+      ? `<input class="cell-input eisen" value="${esc(row.eisen)}" placeholder="min." oninput="getData()[${i}].eisen=this.value;liveAktualisieren(${i});scheduleAutosave()">`
       : `<div class="cell-val" style="color:var(--red)">${esc(row.eisen)}</div>`;
 
     if (isTruck) {
       const packVal = row.pack ? `<div class="cell-val">${esc(row.pack)}</div>` : `<div class="cell-val" style="color:var(--text-subtle)">—</div>`;
-      return `<div class="truck-row table-row${low?' low':''}">
+      return `<div class="truck-row table-row${low?' low':''}" data-idx="${i}">
         <div class="item-name-cell"><span class="item-name-text">${esc(row.name)} ${lowBadge}</span></div>
         ${packVal}
-        <input class="cell-input menge" value="${esc(row.menge)}" placeholder="0" oninput="getData()[${i}].menge=this.value;render();scheduleAutosave()">
+        <input class="cell-input menge" value="${esc(row.menge)}" placeholder="0" oninput="getData()[${i}].menge=this.value;liveAktualisieren(${i});scheduleAutosave()">
         ${eisenDisplay}
         ${ctxBtn}
       </div>`;
@@ -829,14 +883,14 @@ function render() {
       const packDisplay = (isBO || !row.pack)
         ? `<input class="cell-input" value="${esc(row.pack)}" placeholder="z.B. 750ml" oninput="getData()[${i}].pack=this.value;scheduleAutosave()">`
         : `<div class="cell-val">${esc(row.pack)}</div>`;
-      return `<div class="lager-row table-row${low?' low':''}">
+      return `<div class="lager-row table-row${low?' low':''}" data-idx="${i}">
         <div class="item-name-cell">
           <span class="item-name-text">${esc(row.name)} ${lowBadge}</span>
           ${vendorTag}
         </div>
         <div class="lager-vendor" style="font-size:12px;color:var(--text-muted);padding:4px">${esc(row.vendor||'—')}</div>
         ${packDisplay}
-        <input class="cell-input menge" value="${esc(row.menge)}" placeholder="0" oninput="getData()[${i}].menge=this.value;render();scheduleAutosave()">
+        <input class="cell-input menge" value="${esc(row.menge)}" placeholder="0" oninput="getData()[${i}].menge=this.value;liveAktualisieren(${i});scheduleAutosave()">
         ${eisenDisplay}
         ${ctxBtn}
       </div>`;
