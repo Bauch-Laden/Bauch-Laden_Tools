@@ -159,7 +159,7 @@ header {
 <header>
   <div class="logo">📦</div>
   <div class="header-text">
-    <h1>Bauch-Laden Bestandsaufnahme <span class="version">v3.5</span></h1>
+    <h1>Bauch-Laden Bestandsaufnahme <span class="version">v3.6</span></h1>
     <p id="last-sync">Noch nicht synchronisiert</p>
   </div>
   <div class="header-right">
@@ -429,14 +429,23 @@ function signIn() { tokenClient.requestAccessToken({ prompt: '', login_hint: 'in
 
 async function loadBothTabs() {
   showToast('⏳ Lade Daten...');
-  await loadTab('lager');
-  await loadTab('truck');
-  await loadTab('back');
-  await loadTab('bf');
-  updateLastSync();
-  dataLoaded = true;
+  const ok = [];
+  ok.push(await loadTab('lager'));
+  ok.push(await loadTab('truck'));
+  ok.push(await loadTab('back'));
+  ok.push(await loadTab('bf'));
   render();
-  showToast('✓ Daten geladen');
+  if (ok.every(Boolean)) {
+    dataLoaded = true;      // erst jetzt darf gespeichert werden
+    updateLastSync();
+    showToast('✓ Daten geladen');
+  } else {
+    // Mindestens ein Blatt kam nicht an: Speichern bleibt gesperrt, damit keine
+    // unvollständigen Daten über das Google Sheet geschrieben werden.
+    dataLoaded = false;
+    document.getElementById('last-sync').textContent = '⚠️ Nicht vollständig geladen — Speichern gesperrt';
+    showToast('⚠️ Laden unvollständig — bitte Seite neu laden');
+  }
 }
 
 async function loadTab(tab) {
@@ -449,7 +458,11 @@ async function loadTab(tab) {
       `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(sheetName)}!${cols}`,
       { headers: { Authorization: `Bearer ${accessToken}` } }
     );
+    // WICHTIG: fetch wirft bei 401/403/429/500 keinen Fehler. Ohne diese Prüfung hielte die App
+    // ein nicht geladenes Blatt für leer und würde es mit den Default-Zutaten überschreiben.
+    if (!resp.ok) throw new Error('HTTP ' + resp.status + ' bei ' + sheetName);
     const data = await resp.json();
+    if (data.error) throw new Error(data.error.message || 'API-Fehler bei ' + sheetName);
     if (data.values && data.values.length > 1) {
       const header = data.values[0];
       const rows = data.values.slice(1);
@@ -482,7 +495,11 @@ async function loadTab(tab) {
       if (tab === 'bf') { bfData = buildBfData(); await ensureSheet('B&F'); }
       await initSheet(tab);
     }
-  } catch(e) { showToast('❌ Fehler beim Laden'); }
+    return true;
+  } catch(e) {
+    showToast('❌ Fehler beim Laden: ' + (e.message || e));
+    return false;
+  }
 }
 
 async function ensureSheet(title) {
@@ -546,21 +563,38 @@ async function saveToSheets(silent = false) {
     if (!silent) showToast('✓ Gespeichert');
     updateLastSync();
     if (silent) document.getElementById('last-sync').textContent = `Automatisch gespeichert: ${new Date().toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})}`;
-  } catch(e) { showToast('❌ Fehler beim Speichern'); }
+  } catch(e) {
+    showToast('❌ Nicht gespeichert: ' + (e.message || e));
+    document.getElementById('last-sync').textContent = '❌ Letzter Speicherversuch fehlgeschlagen';
+  }
   btn.disabled = false; btn.textContent = '💾 Speichern';
 }
 
 async function writeSheet(sheetName, values) {
-  // First clear the entire sheet to remove stale rows (correct clear URL format)
-  await fetch(
-    `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(sheetName)}!A1:G1000:clear`,
-    { method:'POST', headers:{ Authorization:`Bearer ${accessToken}`, 'Content-Type':'application/json' }, body:'{}' }
-  );
-  // Then write fresh data — use G to cover all 7 possible columns
-  await fetch(
+  // Sicherheitsnetz: ein leeres Blatt schreiben wir nie — das wäre immer Datenverlust.
+  if (!values || values.length < 2) {
+    throw new Error('Keine Daten für ' + sheetName + ' — Schreiben abgebrochen');
+  }
+
+  // ZUERST schreiben, DANN aufräumen. Früher wurde erst das ganze Blatt geleert und dann
+  // geschrieben: schlug das Schreiben fehl (abgelaufener Token, Limit, Netzfehler), blieb das
+  // Blatt leer zurück. So ist das Blatt zu keinem Zeitpunkt ohne Daten.
+  const putResp = await fetch(
     `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(sheetName)}!A1:G${values.length}?valueInputOption=RAW`,
     { method:'PUT', headers:{ Authorization:`Bearer ${accessToken}`, 'Content-Type':'application/json' }, body:JSON.stringify({values}) }
   );
+  if (!putResp.ok) {
+    throw new Error('Speichern von ' + sheetName + ' fehlgeschlagen (HTTP ' + putResp.status + ')');
+  }
+
+  // Nur die Zeilen UNTERHALB der neu geschriebenen Daten entfernen (alte, längere Stände).
+  const clearResp = await fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(sheetName)}!A${values.length + 1}:G1000:clear`,
+    { method:'POST', headers:{ Authorization:`Bearer ${accessToken}`, 'Content-Type':'application/json' }, body:'{}' }
+  );
+  if (!clearResp.ok) {
+    throw new Error('Aufräumen von ' + sheetName + ' fehlgeschlagen (HTTP ' + clearResp.status + ')');
+  }
 }
 
 function switchTab(tab) {
@@ -626,6 +660,7 @@ function addRow() {
   document.getElementById('new-name').value = '';
   document.querySelectorAll('.add-row input').forEach(i => i.value='');
   render();
+  saveToSheets();   // Backoffice-Änderung sofort sichern
 }
 
 function openCtx(i, name, btn) {
@@ -647,6 +682,7 @@ function deleteRow() {
   if (!confirm(`"${data[idx].name}" wirklich löschen?`)) return;
   data.splice(idx, 1);
   ctxIndex = null; ctxName = null; render();
+  saveToSheets();   // Backoffice-Änderung sofort sichern
 }
 
 function editRow() {
@@ -695,6 +731,7 @@ function confirmEdit() {
     row.vendor = editVendors.join(', ');
   }
   closeEditModal(); render();
+  saveToSheets();   // Backoffice-Änderung sofort sichern
 }
 
 function archiveRow() {
