@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Arbeitszeit – Bauch-Laden</title>
+<style>
+  :root {
+    --orange: #FF9A00;
+    --flame: #FF6700;
+    --dark: #2B2620;
+    --cream: #FBF7F0;
+    --line: #E8E0D3;
+    --text: #3A342C;
+    --muted: #766F63;
+    --green: #3C8A5B;
+    --red: #C42829;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--cream);
+    color: var(--text);
+    line-height: 1.5;
+  }
+  .wrap { max-width: 520px; margin: 0 auto; padding: 24px 20px 100px; }
+  .back-link { display: inline-block; color: var(--flame); text-decoration: none; font-weight: 600; margin-bottom: 12px; }
+  .eyebrow { color: var(--flame); font-weight: 700; letter-spacing: 0.08em; font-size: 0.75rem; text-transform: uppercase; }
+  h1 { font-size: 1.6rem; margin: 6px 0 18px; color: var(--dark); }
+
+  .field { margin-bottom: 16px; }
+  .field label { display: block; font-weight: 700; font-size: 0.9rem; margin-bottom: 6px; color: var(--dark); }
+  .field input, .field select {
+    width: 100%; padding: 12px 14px; border: 1.5px solid var(--line); border-radius: 10px;
+    font-size: 1rem; background: #fff; color: var(--text); font-family: inherit;
+  }
+  .field input:focus, .field select:focus { outline: none; border-color: var(--orange); }
+
+  .time-row { display: flex; gap: 10px; }
+  .time-row .field { flex: 1; margin-bottom: 0; }
+
+  .summary {
+    background: #fff; border: 1px solid var(--line); border-radius: 12px;
+    padding: 14px 16px; margin: 18px 0; font-size: 0.95rem;
+  }
+  .summary-row { display: flex; justify-content: space-between; padding: 3px 0; }
+  .summary-label { color: var(--muted); }
+  .summary-value { font-weight: 700; color: var(--dark); }
+  .summary-note { color: var(--muted); font-size: 0.8rem; margin-top: 6px; }
+
+  .error-box {
+    background: #FBEDED; border: 1px solid var(--red); color: var(--red);
+    border-radius: 10px; padding: 10px 14px; font-size: 0.9rem; margin-bottom: 14px; display: none;
+  }
+  .error-box.visible { display: block; }
+
+  .btn {
+    display: block; width: 100%; background: var(--orange); color: #fff; border: none;
+    padding: 15px 0; border-radius: 10px; font-size: 1.05rem; font-weight: 700;
+    cursor: pointer; font-family: inherit;
+  }
+  .btn:hover { background: var(--flame); }
+  .btn:disabled { opacity: 0.45; cursor: default; }
+
+  .success-card {
+    text-align: center; background: #fff; border: 1px solid var(--line);
+    border-radius: 14px; padding: 36px 24px;
+  }
+  .success-icon { font-size: 3rem; margin-bottom: 10px; }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">Bauch-Laden</div>
+  <h1>⏱️ Arbeitszeit erfassen</h1>
+
+  <div id="form-area">
+    <div class="field">
+      <label for="f-datum">Datum</label>
+      <input type="date" id="f-datum">
+    </div>
+
+    <div class="field">
+      <label for="f-name">Name</label>
+      <select id="f-name">
+        <option value="" disabled selected>Bitte wählen…</option>
+        <option>AnnCathrin Wolf</option>
+        <option>Ayse Bulut</option>
+        <option>Daniela Nitsch</option>
+        <option>Dylan Embah</option>
+        <option>Hüseyin Wäldele</option>
+        <option>Khadijatou Sow</option>
+        <option>Manolya Süzer</option>
+        <option>Nathan Tekoutsap</option>
+        <option>Zyad Bayere</option>
+      </select>
+    </div>
+
+    <div class="field hidden" id="grill-field">
+      <label for="f-grill">Grillarbeit (Stunden)</label>
+      <input type="number" id="f-grill" min="0" step="0.5" value="0" inputmode="decimal">
+    </div>
+
+    <div class="time-row" style="margin-bottom:16px;">
+      <div class="field">
+        <label for="f-start">Startzeit</label>
+        <input type="time" id="f-start">
+      </div>
+      <div class="field">
+        <label for="f-ende">Endzeit</label>
+        <input type="time" id="f-ende">
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="f-pause">Pause (Minuten)</label>
+      <input type="number" id="f-pause" min="0" step="5" inputmode="numeric" placeholder="z. B. 30">
+    </div>
+
+    <div class="summary" id="summary" style="display:none;">
+      <div class="summary-row"><span class="summary-label">Anwesenheit</span><span class="summary-value" id="sum-brutto">–</span></div>
+      <div class="summary-row"><span class="summary-label">Pause</span><span class="summary-value" id="sum-pause">–</span></div>
+      <div class="summary-row"><span class="summary-label">Arbeitszeit</span><span class="summary-value" id="sum-netto">–</span></div>
+      <div class="summary-note" id="sum-note"></div>
+    </div>
+
+    <div class="error-box" id="error-box"></div>
+
+    <button class="btn" id="submit-btn">Eintragen</button>
+  </div>
+
+  <div id="success-area" class="hidden">
+    <div class="success-card">
+      <div class="success-icon">✅</div>
+      <h2 style="margin:0 0 6px;">Eingetragen!</h2>
+      <p style="color:var(--muted); margin:0 0 22px;" id="success-detail"></p>
+      <button class="btn" id="new-entry-btn">Weiteren Eintrag erfassen</button>
+    </div>
+  </div>
+  <div style="text-align:center; color:var(--muted); font-size:0.75rem; margin-top:28px;">Arbeitszeit v<span id="ver"></span></div>
+</div>
+
+<iframe name="hidden_iframe" style="display:none;"></iframe>
+<form id="gform"
+      action="https://docs.google.com/forms/d/e/1FAIpQLSfksZZN-44gfApqL1Iy1wo92RJ6U_S6wCoJ2pUh4VSV2_PypQ/formResponse"
+      method="POST" target="hidden_iframe" style="display:none;">
+  <input type="text" name="entry.636219960" id="entry-datum">
+  <input type="text" name="entry.847650818" id="entry-name">
+  <input type="text" name="entry.105205378" id="entry-team">
+  <input type="text" name="entry.1310518355" id="entry-grill">
+  <input type="text" name="entry.1577074958" id="entry-start">
+  <input type="text" name="entry.1144347589" id="entry-ende">
+  <input type="text" name="entry.1618992196" id="entry-pause">
+  <input type="text" name="entry.1858417695" id="entry-netto">
+  <input type="text" name="entry.1734420475" id="entry-code">
+</form>
+
+<script>
+  const GRILL_NAME = "Nathan Tekoutsap";
+  const MAX_HOURS_WITHOUT_LONG_BREAK = 6; // Stunden
+  const MIN_BREAK_LONG = 60; // Minuten
+
+  const APP_VERSION = "1.0.0";
+  document.getElementById("ver").textContent = APP_VERSION;
+  const TEAM = "BL"; // es gibt nur noch Bauch-Laden; Feld bleibt im Google-Formular gefüllt
+
+  // Datum mit heute vorbelegen
+  (function () {
+    const d = new Date();
+    document.getElementById("f-datum").value =
+      d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  })();
+
+  function fmtMin(mins) {
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    return h + " Std. " + (m > 0 ? m + " Min." : "").trim();
+  }
+
+  // Liefert { brutto, pause, netto, overnight } in Minuten oder null wenn unvollständig
+  function calc() {
+    const start = document.getElementById("f-start").value;
+    const ende = document.getElementById("f-ende").value;
+    const pauseRaw = document.getElementById("f-pause").value;
+    if (!start || !ende || pauseRaw === "") return null;
+
+    const [sh, sm] = start.split(":").map(Number);
+    const [eh, em] = ende.split(":").map(Number);
+    let brutto = (eh * 60 + em) - (sh * 60 + sm);
+    let overnight = false;
+    if (brutto <= 0) { brutto += 24 * 60; overnight = true; } // über Mitternacht
+
+    const pause = Math.max(0, parseInt(pauseRaw, 10) || 0);
+    const netto = brutto - pause;
+    return { brutto, pause, netto, overnight };
+  }
+
+  function validate() {
+    const errors = [];
+    const name = document.getElementById("f-name").value;
+    const datum = document.getElementById("f-datum").value;
+    if (!datum) errors.push("Bitte Datum wählen.");
+    if (!name) errors.push("Bitte Name wählen.");
+
+    const c = calc();
+    if (!c) {
+      errors.push("Bitte Start-, Endzeit und Pause eingeben.");
+    } else {
+      if (c.netto <= 0) errors.push("Die Pause ist länger als die gesamte Anwesenheitszeit.");
+      if (c.brutto > MAX_HOURS_WITHOUT_LONG_BREAK * 60 && c.pause < MIN_BREAK_LONG) {
+        errors.push("Bei mehr als " + MAX_HOURS_WITHOUT_LONG_BREAK + " Stunden Anwesenheit muss die Pause mindestens " + MIN_BREAK_LONG + " Minuten betragen.");
+      }
+      if (name === GRILL_NAME) {
+        const grill = parseFloat(document.getElementById("f-grill").value) || 0;
+        if (grill < 0) errors.push("Grillstunden können nicht negativ sein.");
+        if (grill * 60 > c.netto) errors.push("Grillarbeit kann nicht länger als die Arbeitszeit sein.");
+      }
+    }
+    return errors;
+  }
+
+  function refresh() {
+    // Grill-Feld nur bei Nathan
+    const name = document.getElementById("f-name").value;
+    document.getElementById("grill-field").classList.toggle("hidden", name !== GRILL_NAME);
+
+    // Live-Zusammenfassung
+    const c = calc();
+    const sumEl = document.getElementById("summary");
+    if (c) {
+      sumEl.style.display = "block";
+      document.getElementById("sum-brutto").textContent = fmtMin(c.brutto) + (c.overnight ? " (über Mitternacht)" : "");
+      document.getElementById("sum-pause").textContent = c.pause + " Min.";
+      document.getElementById("sum-netto").textContent = c.netto > 0 ? fmtMin(c.netto) : "–";
+      document.getElementById("sum-note").textContent =
+        c.brutto > MAX_HOURS_WITHOUT_LONG_BREAK * 60 ? "Hinweis: Über 6 Std. Anwesenheit → mindestens 60 Min. Pause nötig." : "";
+    } else {
+      sumEl.style.display = "none";
+    }
+
+    // Fehler live anzeigen (nur wenn schon etwas eingegeben wurde)
+    const errors = validate();
+    const errBox = document.getElementById("error-box");
+    const meaningful = errors.filter((e) => !e.startsWith("Bitte"));
+    if (meaningful.length > 0) {
+      errBox.textContent = meaningful.join(" ");
+      errBox.classList.add("visible");
+    } else {
+      errBox.classList.remove("visible");
+    }
+  }
+
+  ["f-datum", "f-name", "f-start", "f-ende", "f-pause", "f-grill"].forEach((id) => {
+    document.getElementById(id).addEventListener("input", refresh);
+    document.getElementById(id).addEventListener("change", refresh);
+  });
+
+  document.getElementById("submit-btn").addEventListener("click", () => {
+    const errors = validate();
+    const errBox = document.getElementById("error-box");
+    if (errors.length > 0) {
+      errBox.textContent = errors.join(" ");
+      errBox.classList.add("visible");
+      return;
+    }
+    errBox.classList.remove("visible");
+
+    const c = calc();
+    const name = document.getElementById("f-name").value;
+    const nettoHours = (c.netto / 60).toFixed(2).replace(".", ","); // z. B. "7,50" für Excel/Sheets
+
+    document.getElementById("entry-datum").value = document.getElementById("f-datum").value;
+    document.getElementById("entry-name").value = name;
+    document.getElementById("entry-team").value = TEAM;
+    document.getElementById("entry-grill").value = name === GRILL_NAME ? String(parseFloat(document.getElementById("f-grill").value) || 0).replace(".", ",") : "";
+    document.getElementById("entry-start").value = document.getElementById("f-start").value;
+    document.getElementById("entry-ende").value = document.getElementById("f-ende").value;
+    document.getElementById("entry-pause").value = document.getElementById("f-pause").value;
+    document.getElementById("entry-netto").value = nettoHours;
+    document.getElementById("entry-code").value = "-"; // kein Freigabe-Code mehr nötig
+    document.getElementById("gform").submit();
+
+    document.getElementById("success-detail").textContent =
+      name + " · " + fmtMin(c.netto) + " Arbeitszeit am " + document.getElementById("f-datum").value;
+    document.getElementById("form-area").classList.add("hidden");
+    document.getElementById("success-area").classList.remove("hidden");
+  });
+
+  document.getElementById("new-entry-btn").addEventListener("click", () => {
+    // Formular für nächsten Eintrag leeren (Datum bleibt auf heute)
+    document.getElementById("f-name").selectedIndex = 0;
+    document.getElementById("f-start").value = "";
+    document.getElementById("f-ende").value = "";
+    document.getElementById("f-pause").value = "";
+    document.getElementById("f-grill").value = "0";
+    document.getElementById("success-area").classList.add("hidden");
+    document.getElementById("form-area").classList.remove("hidden");
+    refresh();
+  });
+</script>
+</body>
+</html>
