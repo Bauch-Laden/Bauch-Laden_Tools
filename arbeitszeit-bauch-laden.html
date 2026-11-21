@@ -69,12 +69,33 @@
   }
   .success-icon { font-size: 3rem; margin-bottom: 10px; }
   .hidden { display: none !important; }
+
+  /* Meine Stunden */
+  .btn-secondary { background: #fff; color: var(--flame); border: 1.5px solid var(--orange); margin-top: 12px; }
+  .btn-secondary:hover { background: #FFF3E0; color: var(--flame); }
+  .hours-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+  .hours-head .who { font-weight: 700; color: var(--dark); }
+  .link-btn { background: none; border: none; color: var(--flame); font-weight: 600; font-size: 0.9rem; cursor: pointer; padding: 4px 0; font-family: inherit; }
+  .total-card { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin: 4px 0 18px; }
+  .total-big { font-size: 1.7rem; font-weight: 800; color: var(--dark); }
+  .total-sub { color: var(--muted); font-size: 0.85rem; }
+  .day-card { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; margin-bottom: 10px; }
+  .day-title { font-weight: 700; color: var(--dark); margin-bottom: 8px; }
+  .day-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .day-grid label { display: block; font-size: 0.75rem; color: var(--muted); margin-bottom: 2px; }
+  .day-grid input {
+    width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px;
+    font-size: 0.95rem; background: #F6F2EA; color: var(--text); font-family: inherit;
+  }
+  .day-grid input:focus { outline: none; }
+  .empty-note { color: var(--muted); text-align: center; padding: 18px 0; }
+  .hint { color: var(--muted); font-size: 0.8rem; margin-top: 14px; text-align: center; }
 </style>
 </head>
 <body>
 <div class="wrap">
   <div class="eyebrow">Bauch-Laden</div>
-  <h1>⏱️ Arbeitszeit erfassen</h1>
+  <h1 id="page-title">⏱️ Arbeitszeit erfassen</h1>
 
   <div id="form-area">
     <div class="field">
@@ -129,6 +150,46 @@
     <div class="error-box" id="error-box"></div>
 
     <button class="btn" id="submit-btn">Eintragen</button>
+    <button class="btn btn-secondary" id="hours-btn" type="button">Meine Stunden ansehen</button>
+  </div>
+
+  <!-- Meine Stunden: nur lesen, keine Änderungen möglich -->
+  <div id="hours-area" class="hidden">
+    <div id="hours-login">
+      <form id="login-form" autocomplete="on">
+        <div class="field">
+          <label for="h-name">Name</label>
+          <select id="h-name" name="username" autocomplete="username"></select>
+        </div>
+        <div class="field">
+          <label for="h-pw">Passwort</label>
+          <input type="password" id="h-pw" name="password" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false">
+        </div>
+        <div class="error-box" id="h-error"></div>
+        <button class="btn" id="h-login-btn" type="submit">Stunden anzeigen</button>
+      </form>
+      <button class="btn btn-secondary" id="h-back-btn" type="button">Zurück zum Eintragen</button>
+    </div>
+
+    <div id="hours-result" class="hidden">
+      <div class="hours-head">
+        <span class="who" id="h-who"></span>
+        <button class="link-btn" id="h-logout-btn" type="button">Abmelden</button>
+      </div>
+      <div class="field">
+        <label for="h-month">Monat</label>
+        <select id="h-month"></select>
+      </div>
+      <div class="total-card">
+        <div class="total-sub">Arbeitszeit im Monat</div>
+        <div class="total-big" id="h-total">–</div>
+        <div class="total-sub" id="h-total-sub"></div>
+      </div>
+      <div id="h-days"></div>
+      <div class="hint">Nur zur Ansicht. Wenn etwas nicht stimmt, sag bitte Orhun Bescheid.</div>
+      <button class="btn btn-secondary" id="h-refresh-btn" type="button">Aktualisieren</button>
+      <button class="btn btn-secondary" id="h-back2-btn" type="button">Zurück zum Eintragen</button>
+    </div>
   </div>
 
   <div id="success-area" class="hidden">
@@ -162,7 +223,7 @@
   const MAX_HOURS_WITHOUT_LONG_BREAK = 6; // Stunden
   const MIN_BREAK_LONG = 60; // Minuten
 
-  const APP_VERSION = "1.0.0";
+  const APP_VERSION = "1.1.0";
   document.getElementById("ver").textContent = APP_VERSION;
   const TEAM = "BL"; // es gibt nur noch Bauch-Laden; Feld bleibt im Google-Formular gefüllt
 
@@ -298,6 +359,202 @@
     document.getElementById("success-area").classList.add("hidden");
     document.getElementById("form-area").classList.remove("hidden");
     refresh();
+  });
+
+  /* ============================================================
+   * Meine Stunden (nur lesen)
+   * Daten kommen vom Google-Apps-Script am Sheet. Das Script prüft
+   * das Passwort und liefert nur die Einträge der jeweiligen Person.
+   * ============================================================ */
+  const STUNDEN_URL = ""; // Web-App-URL des Apps Scripts (endet auf /exec)
+  const START_MONAT = "2026-07";
+  const MONATE = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
+  const WOCHENTAGE = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
+
+  let hState = { name: "", pw: "", eintraege: [] }; // nur im Speicher, nichts wird auf dem Gerät gespeichert
+
+  const $ = (id) => document.getElementById(id);
+
+  // Namensliste aus dem Eintragen-Formular übernehmen
+  $("h-name").innerHTML = $("f-name").innerHTML;
+
+  function zeige(bereich) {
+    $("form-area").classList.toggle("hidden", bereich !== "form");
+    $("success-area").classList.add("hidden");
+    $("hours-area").classList.toggle("hidden", bereich === "form");
+    $("hours-login").classList.toggle("hidden", bereich !== "login");
+    $("hours-result").classList.toggle("hidden", bereich !== "result");
+    $("page-title").textContent = bereich === "form" ? "⏱️ Arbeitszeit erfassen" : "📅 Meine Stunden";
+    window.scrollTo(0, 0);
+  }
+
+  function hFehler(text) {
+    $("h-error").textContent = text || "";
+    $("h-error").classList.toggle("visible", !!text);
+  }
+
+  function stdText(stunden) {
+    const min = Math.round(stunden * 60);
+    return fmtMin(min);
+  }
+  function dezimal(stunden) {
+    return (Math.round(stunden * 100) / 100).toFixed(2).replace(".", ",");
+  }
+  function datumText(iso) {
+    const [y, m, d] = iso.split("-").map(Number);
+    const wt = WOCHENTAGE[new Date(y, m - 1, d).getDay()];
+    return wt + ", " + String(d).padStart(2, "0") + "." + String(m).padStart(2, "0") + "." + y;
+  }
+
+  function monatsListe() {
+    const jetzt = new Date();
+    let ende = jetzt.getFullYear() + "-" + String(jetzt.getMonth() + 1).padStart(2, "0");
+    hState.eintraege.forEach((e) => { if (e.datum.slice(0, 7) > ende) ende = e.datum.slice(0, 7); });
+    const liste = [];
+    let [y, m] = START_MONAT.split("-").map(Number);
+    while (true) {
+      const key = y + "-" + String(m).padStart(2, "0");
+      if (key > ende) break;
+      liste.push(key);
+      m++; if (m > 12) { m = 1; y++; }
+    }
+    return liste.reverse(); // neuester Monat oben
+  }
+
+  function feld(label, wert) {
+    const box = document.createElement("div");
+    const l = document.createElement("label");
+    l.textContent = label;
+    const i = document.createElement("input");
+    i.type = "text";
+    i.readOnly = true;
+    i.tabIndex = -1;
+    i.value = wert;
+    box.appendChild(l);
+    box.appendChild(i);
+    return box;
+  }
+
+  function zeigeMonat() {
+    const monat = $("h-month").value;
+    const tage = hState.eintraege.filter((e) => e.datum.slice(0, 7) === monat);
+    const summe = tage.reduce((s, e) => s + (Number(e.netto) || 0), 0);
+    const grill = tage.reduce((s, e) => s + (Number(e.grill) || 0), 0);
+
+    $("h-total").textContent = stdText(summe);
+    let sub = dezimal(summe) + " Std. · " + tage.length + (tage.length === 1 ? " Eintrag" : " Einträge");
+    if (grill > 0) sub += " · davon Grill: " + dezimal(grill) + " Std.";
+    $("h-total-sub").textContent = sub;
+
+    const box = $("h-days");
+    box.innerHTML = "";
+    if (tage.length === 0) {
+      const p = document.createElement("div");
+      p.className = "empty-note";
+      p.textContent = "Keine Einträge in diesem Monat.";
+      box.appendChild(p);
+      return;
+    }
+    tage.forEach((e) => {
+      const card = document.createElement("div");
+      card.className = "day-card";
+      const t = document.createElement("div");
+      t.className = "day-title";
+      t.textContent = datumText(e.datum);
+      card.appendChild(t);
+      const grid = document.createElement("div");
+      grid.className = "day-grid";
+      grid.appendChild(feld("Start", e.start || "–"));
+      grid.appendChild(feld("Ende", e.ende || "–"));
+      grid.appendChild(feld("Pause", e.pause === "" ? "–" : e.pause + " Min."));
+      grid.appendChild(feld("Arbeitszeit", stdText(Number(e.netto) || 0)));
+      if (Number(e.grill) > 0) grid.appendChild(feld("Grillstunden", dezimal(Number(e.grill)) + " Std."));
+      card.appendChild(grid);
+      box.appendChild(card);
+    });
+  }
+
+  async function ladeStunden(name, pw) {
+    const res = await fetch(STUNDEN_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" }, // vermeidet CORS-Vorabprüfung
+      body: JSON.stringify({ name: name, passwort: pw })
+    });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    return res.json();
+  }
+
+  $("hours-btn").addEventListener("click", () => {
+    const gewaehlt = $("f-name").value;
+    if (gewaehlt) $("h-name").value = gewaehlt;
+    hFehler("");
+    zeige("login");
+  });
+  $("h-back-btn").addEventListener("click", () => zeige("form"));
+  $("h-back2-btn").addEventListener("click", () => zeige("form"));
+
+  $("login-form").addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    const name = $("h-name").value;
+    const pw = $("h-pw").value.trim();
+    if (!name || !pw) { hFehler("Bitte Name und Passwort eingeben."); return; }
+    if (!STUNDEN_URL) { hFehler("Die Stundenansicht ist noch nicht eingerichtet."); return; }
+
+    hFehler("");
+    const btn = $("h-login-btn");
+    btn.disabled = true;
+    btn.textContent = "Wird geladen…";
+    try {
+      const data = await ladeStunden(name, pw);
+      if (!data.ok) { hFehler(data.fehler || "Name oder Passwort falsch."); return; }
+      hState = { name: name, pw: pw, eintraege: data.eintraege || [] };
+      $("h-pw").value = "";
+      $("h-who").textContent = name;
+      const sel = $("h-month");
+      sel.innerHTML = "";
+      monatsListe().forEach((key) => {
+        const [y, m] = key.split("-").map(Number);
+        const o = document.createElement("option");
+        o.value = key;
+        o.textContent = MONATE[m - 1] + " " + y;
+        sel.appendChild(o);
+      });
+      zeigeMonat();
+      zeige("result");
+    } catch (err) {
+      hFehler("Keine Verbindung. Bitte später nochmal versuchen.");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Stunden anzeigen";
+    }
+  });
+
+  $("h-month").addEventListener("change", zeigeMonat);
+
+  $("h-refresh-btn").addEventListener("click", async () => {
+    const btn = $("h-refresh-btn");
+    btn.disabled = true;
+    btn.textContent = "Wird geladen…";
+    try {
+      const data = await ladeStunden(hState.name, hState.pw);
+      if (data.ok) {
+        const monat = $("h-month").value;
+        hState.eintraege = data.eintraege || [];
+        $("h-month").value = monat;
+        zeigeMonat();
+      }
+    } catch (err) { /* alte Ansicht bleibt stehen */ }
+    finally {
+      btn.disabled = false;
+      btn.textContent = "Aktualisieren";
+    }
+  });
+
+  $("h-logout-btn").addEventListener("click", () => {
+    hState = { name: "", pw: "", eintraege: [] };
+    $("h-days").innerHTML = "";
+    $("h-pw").value = "";
+    zeige("form");
   });
 </script>
 </body>
