@@ -96,16 +96,45 @@
   }
   .version { text-align: center; color: var(--muted); font-size: 0.72rem; margin-top: 10px; }
   .hidden { display: none !important; }
+  .menu-card.zuletzt { border-color: var(--accent); }
+  .zuletzt-tag {
+    display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: 20px;
+    background: var(--accent); color: #fff; font-size: 0.68rem; font-weight: 700; vertical-align: middle;
+  }
+  .hinweis {
+    background: #FFF4E0; border: 1px solid #F3D29A; border-radius: 10px;
+    padding: 10px 14px; margin-bottom: 14px; font-size: 0.86rem; color: var(--text);
+  }
 </style>
 </head>
 <body>
 <div class="wrap">
 
-  <!-- MENU (Startseite der Checklisten) -->
-  <section class="screen active" id="screen-menu">
+  <!-- AUSWAHL: welche Checkliste? -->
+  <section class="screen active" id="screen-event">
     <a class="back-link" href="index.html" style="display:block;">← Zur Startseite</a>
     <div class="eyebrow">Bauch-Laden</div>
     <h1>Checklisten</h1>
+    <div class="menu-card" id="event-card-standard" onclick="eventWaehlen('standard')">
+      <div class="menu-icon">🚚</div>
+      <div class="menu-text"><div class="menu-title">Standard Bauch-Laden Checkliste</div><div class="menu-sub">Normaler Food-Truck-Betrieb</div></div>
+      <div class="menu-arrow">→</div>
+    </div>
+    <div class="menu-card" id="event-card-wouahou" onclick="eventWaehlen('wouahou')">
+      <div class="menu-icon">❄️</div>
+      <div class="menu-text"><div class="menu-title">WOUAHOU Winterdorf Checkliste</div><div class="menu-sub">Alternativer Weihnachtsmarkt</div></div>
+      <div class="menu-arrow">→</div>
+    </div>
+    <div class="version" id="version-label"></div>
+  </section>
+
+  <!-- MENU der gewählten Checkliste -->
+  <section class="screen" id="screen-menu">
+    <a class="back-link" href="index.html" style="display:block;">← Zur Startseite</a>
+    <span class="back-link" onclick="goToEvents()">← Andere Checkliste wählen</span>
+    <div class="eyebrow" id="menu-eyebrow">Bauch-Laden</div>
+    <h1>Checklisten</h1>
+    <div class="hinweis hidden" id="menu-hinweis"></div>
     <div class="menu-card" onclick="openChecklist('aufbau')">
       <div class="menu-icon">🚚</div>
       <div class="menu-text"><div class="menu-title">Start & Aufbau</div><div class="menu-sub">Vor Verkaufsstart</div></div>
@@ -122,15 +151,14 @@
       <div class="menu-arrow">→</div>
     </div>
     <div class="backoffice-link">
-      <span onclick="showScreen('screen-backoffice')">⚙️ Backoffice</span>
+      <span onclick="boOeffnen()">⚙️ Backoffice</span>
     </div>
-    <div class="version" id="version-label"></div>
   </section>
 
   <!-- BACKOFFICE: Checklisten per CSV aktualisieren -->
   <section class="screen" id="screen-backoffice">
     <span class="back-link" onclick="goToMenu()">← Zurück zu den Checklisten</span>
-    <div class="eyebrow">Backoffice</div>
+    <div class="eyebrow" id="bo-eyebrow">Backoffice</div>
     <h1>Checklisten aktualisieren</h1>
 
     <div id="bo-login">
@@ -144,6 +172,7 @@
 
     <div id="bo-panel" class="hidden">
       <p style="color:var(--muted); font-size:0.92rem; line-height:1.5;">
+        Gilt nur für: <strong id="bo-event-name"></strong><br>
         CSV-Datei wählen oder Inhalt einfügen. Spalten (mit Semikolon getrennt):<br>
         <strong>Bereich; Bauch-Laden (BL)</strong><br>
         Optional mit Zwischenüberschriften: <strong>Bereich; Unterthema; Bauch-Laden (BL)</strong><br>
@@ -189,10 +218,10 @@
 </div>
 
 <script>
-  const SEITEN_VERSION = "1.0";
+  const SEITEN_VERSION = "1.1";
 
-  // Grundstand der Checklisten (= Stand von "BL Checkliste.csv").
-  // Wird beim Öffnen durch die zentrale CSV aus dem Repo ersetzt; im Backoffice manuell überschreibbar.
+  // Grundstand der Standard-Checkliste (= Stand von "BL Checkliste.csv").
+  // Wird beim Öffnen durch die zentrale CSV der gewählten Checkliste ersetzt; im Backoffice manuell überschreibbar.
   const DEFAULT_CONTENT = {
     "aufbau": {
       "title": "Start & Aufbau-Checkliste",
@@ -311,10 +340,29 @@
 
   // ====================== BACKOFFICE: CSV-Import ======================
   const BO_PASSWORT = "111222";
-  // Zentrale CSV im Repo – wird beim Öffnen automatisch geladen, damit alle denselben Stand sehen
-  const CSV_URL = "https://raw.githubusercontent.com/Bauch-Laden/Bauch-Laden_Tools/main/BL%20Checkliste.csv";
-  // Eigener Speicherschlüssel: die alte Seite (gleiche github.io-Domain) nutzt "bl_checklisten_csv_v1" mit BL+BF-Struktur
-  const BO_SPEICHER = "bl_checklisten_csv_v2";
+  const REPO_RAW = "https://raw.githubusercontent.com/Bauch-Laden/Bauch-Laden_Tools/main/";
+
+  // Die wählbaren Checklisten. Jede hat ihre eigene CSV im Repo und ihren eigenen Speicher auf dem Gerät.
+  // "standard" behält den bisherigen Speicherschlüssel, damit vorhandene Stände erhalten bleiben.
+  // (Die alte BL/BF-Seite auf derselben github.io-Domain nutzt "bl_checklisten_csv_v1" – nicht verwenden.)
+  const VERANSTALTUNGEN = {
+    standard: {
+      name: "Standard Bauch-Laden",
+      csv: REPO_RAW + "BL%20Checkliste.csv",
+      speicher: "bl_checklisten_csv_v2",
+    },
+    wouahou: {
+      name: "WOUAHOU Winterdorf",
+      csv: REPO_RAW + "WOUAHOU%20Checkliste.csv",
+      speicher: "bl_checklisten_wouahou_v1",
+    },
+  };
+  const LETZTE_WAHL = "bl_checklisten_letzte_wahl";
+
+  let aktEvent = "standard";
+  let BO_SPEICHER = VERANSTALTUNGEN.standard.speicher;
+  let CSV_URL = VERANSTALTUNGEN.standard.csv;
+  let quelleAktiv = "grundstand"; // "grundstand" | "repo" | "manuell"
 
   const BEREICHE = [
     { key: "aufbau",    name: "Start & Aufbau",       title: "Start & Aufbau-Checkliste", eyebrow: "Vor Verkaufsstart" },
@@ -405,6 +453,7 @@
   function speichern(neu, quelle) {
     try {
       localStorage.setItem(BO_SPEICHER, JSON.stringify({ datum: new Date().toISOString(), quelle: quelle, content: neu }));
+      quelleAktiv = quelle;
     } catch (e) { /* Speicher nicht verfügbar – Inhalt gilt trotzdem für diese Sitzung */ }
   }
 
@@ -423,7 +472,7 @@
     let gespeichert = null;
     try { gespeichert = localStorage.getItem(BO_SPEICHER); } catch (e) {}
     if (!gespeichert) {
-      el.textContent = "Aktuell aktiv: Grundstand (in der Datei hinterlegt) · " + punkteZaehlen(content) + " Punkte.";
+      el.textContent = "Aktuell aktiv: Grundstand (Standard-Liste aus der Datei) · " + punkteZaehlen(content) + " Punkte.";
       return;
     }
     try {
@@ -431,7 +480,7 @@
       const quelle = daten.quelle === "repo" ? "zentrale CSV aus dem Repo" : "manuell importierte CSV";
       el.innerHTML = "Aktuell aktiv: " + quelle + " vom <strong>" +
         new Date(daten.datum).toLocaleString("de-DE") + "</strong><br>" +
-        "Bauch-Laden: " + punkteZaehlen(daten.content) + " Punkte";
+        VERANSTALTUNGEN[aktEvent].name + ": " + punkteZaehlen(daten.content) + " Punkte";
     } catch (e) { el.textContent = "Importierte Daten vorhanden."; }
   }
 
@@ -441,6 +490,7 @@
       const neu = csvVerarbeiten(text);
       content = neu;
       speichern(neu, "manuell");
+      hinweisAnzeigen();
       msg.innerHTML = '<span style="color:var(--green);">✅ Aktualisiert: ' + punkteZaehlen(neu) + " Punkte.</span>";
       boStatusAnzeigen();
     } catch (e) {
@@ -481,36 +531,107 @@
     if (!window.confirm("Wirklich auf den in der Datei hinterlegten Grundstand zurücksetzen?")) return;
     try { localStorage.removeItem(BO_SPEICHER); } catch (e) {}
     content = DEFAULT_CONTENT;
+    quelleAktiv = "grundstand";
+    hinweisAnzeigen();
     document.getElementById("bo-msg").innerHTML = '<span style="color:var(--green);">✅ Grundstand wiederhergestellt.</span>';
     boStatusAnzeigen();
   }
 
-  // Beim Laden: zuletzt gespeicherten Stand verwenden (funktioniert auch offline)
-  (function () {
+  // Zuletzt gespeicherten Stand der gewählten Checkliste verwenden (funktioniert auch offline)
+  function gespeichertLaden() {
+    content = DEFAULT_CONTENT;
+    quelleAktiv = "grundstand";
     try {
       const gespeichert = localStorage.getItem(BO_SPEICHER);
       if (gespeichert) {
         const daten = JSON.parse(gespeichert);
-        if (daten && daten.content && daten.content.aufbau && daten.content.abschluss) content = daten.content;
+        if (daten && daten.content && daten.content.aufbau && daten.content.abschluss) {
+          content = daten.content;
+          quelleAktiv = daten.quelle || "repo";
+        }
       }
     } catch (e) { /* bei Problemen bleibt der Grundstand aktiv */ }
-  })();
+  }
+
+  // Hinweis im Menü, wenn für WOUAHOU noch keine eigene Liste geladen werden konnte
+  function hinweisAnzeigen() {
+    const el = document.getElementById("menu-hinweis");
+    if (aktEvent !== "standard" && quelleAktiv === "grundstand") {
+      el.textContent = "Für „" + VERANSTALTUNGEN[aktEvent].name + "“ konnte noch keine eigene Liste geladen werden. " +
+        "Angezeigt wird vorerst die Standard-Checkliste.";
+      el.classList.remove("hidden");
+    } else {
+      el.classList.add("hidden");
+    }
+  }
 
   // Zentrale CSV aus dem Repo nachladen, damit alle Geräte denselben Stand bekommen.
   // Schlägt es fehl (kein Netz), bleibt der zuletzt gespeicherte Stand aktiv.
   function zentraleCsvLaden() {
-    return fetch(CSV_URL + "?t=" + Date.now(), { cache: "no-store" })
+    const url = CSV_URL;
+    return fetch(url + "?t=" + Date.now(), { cache: "no-store" })
       .then(r => { if (!r.ok) throw new Error("HTTP " + r.status); return r.text(); })
       .then(text => {
         const neu = csvVerarbeiten(text);
+        // Nur übernehmen, wenn in der Zwischenzeit nicht auf eine andere Checkliste gewechselt wurde
+        if (url !== CSV_URL) return false;
         content = neu;
         speichern(neu, "repo");
+        hinweisAnzeigen();
         return true;
       })
       .catch(() => false);
   }
 
-  zentraleCsvLaden();
+  // Checkliste auswählen: Speicher und CSV umschalten, dann das Menü zeigen
+  function eventSetzen(key) {
+    if (!VERANSTALTUNGEN[key]) key = "standard";
+    aktEvent = key;
+    BO_SPEICHER = VERANSTALTUNGEN[key].speicher;
+    CSV_URL = VERANSTALTUNGEN[key].csv;
+    try { localStorage.setItem(LETZTE_WAHL, key); } catch (e) {}
+    gespeichertLaden();
+    document.getElementById("menu-eyebrow").textContent = VERANSTALTUNGEN[key].name;
+    hinweisAnzeigen();
+    zentraleCsvLaden();
+  }
+
+  function eventWaehlen(key) {
+    eventSetzen(key);
+    goToMenu();
+  }
+
+  function goToEvents() {
+    const url = new URL(window.location.href);
+    url.searchParams.delete("event");
+    url.hash = "";
+    window.history.replaceState({}, "", url.pathname + url.search);
+    zuletztMarkieren();
+    showScreen("screen-event");
+  }
+
+  // Zuletzt genutzte Checkliste auf dem Auswahlbildschirm hervorheben
+  function zuletztMarkieren() {
+    let letzte = null;
+    try { letzte = localStorage.getItem(LETZTE_WAHL); } catch (e) {}
+    Object.keys(VERANSTALTUNGEN).forEach(k => {
+      const karte = document.getElementById("event-card-" + k);
+      if (!karte) return;
+      karte.classList.toggle("zuletzt", k === letzte);
+      const titel = karte.querySelector(".menu-title");
+      const tag = titel.querySelector(".zuletzt-tag");
+      if (k === letzte && !tag) titel.insertAdjacentHTML("beforeend", '<span class="zuletzt-tag">zuletzt</span>');
+      if (k !== letzte && tag) tag.remove();
+    });
+  }
+
+  function boOeffnen() {
+    document.getElementById("bo-eyebrow").textContent = "Backoffice · " + VERANSTALTUNGEN[aktEvent].name;
+    document.getElementById("bo-event-name").textContent = VERANSTALTUNGEN[aktEvent].name;
+    document.getElementById("bo-msg").textContent = "";
+    if (!document.getElementById("bo-panel").classList.contains("hidden")) boStatusAnzeigen();
+    showScreen("screen-backoffice");
+  }
 
   let currentChecked = [];
 
@@ -605,6 +726,7 @@
     const url = new URL(window.location.href);
     url.hash = key || '';
     url.searchParams.delete('brand'); // alter Parameter aus der BL/BF-Version
+    url.searchParams.set('event', aktEvent); // Direktlinks wie checklisten.html?event=wouahou#aufbau
     window.history.replaceState({}, '', key ? url : url.pathname + url.search);
   }
 
@@ -622,12 +744,19 @@
   window.addEventListener('DOMContentLoaded', () => {
     document.getElementById('version-label').textContent = 'Version ' + SEITEN_VERSION;
     const hash = window.location.hash.replace('#', '');
+    const eventParam = new URL(window.location.href).searchParams.get('event');
+    if (!VERANSTALTUNGEN[eventParam]) {
+      // Ohne gültigen Direktlink: immer zuerst die Checkliste auswählen lassen
+      goToEvents();
+      return;
+    }
+    eventSetzen(eventParam);
     if (hash === 'ablauf') {
       openReference('ablauf');
     } else if (hash === 'aufbau' || hash === 'abschluss') {
       openChecklist(hash);
     } else {
-      showScreen('screen-menu');
+      goToMenu();
     }
   });
 </script>
