@@ -160,7 +160,7 @@ header {
 <header>
   <div class="logo">📦</div>
   <div class="header-text">
-    <h1>Bauch-Laden Bestandsaufnahme <span class="version">v3.8</span></h1>
+    <h1>Bauch-Laden Bestandsaufnahme <span class="version">v3.9</span></h1>
     <p id="last-sync">Noch nicht synchronisiert</p>
   </div>
   <div class="header-right">
@@ -175,7 +175,11 @@ header {
 </div>
 
 <div class="tabs">
-  <button class="tab-btn active" onclick="switchTab('truck')" id="tab-truck">
+  <button class="tab-btn active" onclick="switchTab('wou')" id="tab-wou">
+    <span class="tab-icon">❄️</span> Wouahou
+    <span class="tab-badge" id="badge-wou"></span>
+  </button>
+  <button class="tab-btn" onclick="switchTab('truck')" id="tab-truck">
     <span class="tab-icon">🚚</span> Food-Truck
     <span class="tab-badge" id="badge-truck"></span>
   </button>
@@ -190,10 +194,6 @@ header {
   <button class="tab-btn" onclick="switchTab('bf')" id="tab-bf">
     <span class="tab-icon">🔥</span> B&amp;F
     <span class="tab-badge" id="badge-bf"></span>
-  </button>
-  <button class="tab-btn" onclick="switchTab('wou')" id="tab-wou">
-    <span class="tab-icon">❄️</span> Wouahou
-    <span class="tab-badge" id="badge-wou"></span>
   </button>
 </div>
 
@@ -327,7 +327,7 @@ const TRUCK_NAMES = [
   "Zitronen (Saft)","Zucker/Rohrzucker"
 ];
 
-let currentTab = 'truck';
+let currentTab = 'wou'; // Wouahou ist der erste Reiter und beim Öffnen aktiv
 let truckData = [];
 let backData = [];
 
