@@ -45,7 +45,8 @@ header {
 .auth-banner p { font-size: 13px; color: #a06000; }
 .auth-btn { background: var(--orange); color: white; border: none; border-radius: var(--radius-sm); padding: 7px 16px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif; }
 
-.tabs { display: flex; background: var(--surface); border-bottom: 2px solid var(--border); padding: 0 20px; gap: 4px; }
+.tabs { display: flex; background: var(--surface); border-bottom: 2px solid var(--border); padding: 0 20px; gap: 4px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.tab-btn { white-space: nowrap; flex-shrink: 0; }
 .tab-btn { padding: 14px 24px; font-size: 14px; font-weight: 600; font-family: 'DM Sans', sans-serif; background: none; border: none; border-bottom: 3px solid transparent; cursor: pointer; color: var(--text-muted); margin-bottom: -2px; display: flex; align-items: center; gap: 8px; }
 .tab-btn.active { color: var(--orange); border-bottom-color: var(--orange); }
 .tab-icon { font-size: 18px; }
@@ -159,7 +160,7 @@ header {
 <header>
   <div class="logo">📦</div>
   <div class="header-text">
-    <h1>Bauch-Laden Bestandsaufnahme <span class="version">v3.7</span></h1>
+    <h1>Bauch-Laden Bestandsaufnahme <span class="version">v3.8</span></h1>
     <p id="last-sync">Noch nicht synchronisiert</p>
   </div>
   <div class="header-right">
@@ -189,6 +190,10 @@ header {
   <button class="tab-btn" onclick="switchTab('bf')" id="tab-bf">
     <span class="tab-icon">🔥</span> B&amp;F
     <span class="tab-badge" id="badge-bf"></span>
+  </button>
+  <button class="tab-btn" onclick="switchTab('wou')" id="tab-wou">
+    <span class="tab-icon">❄️</span> Wouahou
+    <span class="tab-badge" id="badge-wou"></span>
   </button>
 </div>
 
@@ -388,6 +393,102 @@ const BF_ITEMS = [
 function buildBfData() {
   return BF_ITEMS.map(([name, pack]) => ({ name, pack, menge: '', eisen: '' }));
 }
+// WOUAHOU Winterdorf (aus Materialliste_Weihnachtsmarkt.xlsx); fertige Speisen mit Präfix "Fertig: "
+let wouData = [];
+const WOU_NAMES = [
+  "Ajvar",
+  "Arabisches Fladenbrot",
+  "Backpapier",
+  "Balsamico",
+  "Chips/Nachos",
+  "Desinfektionsmittel",
+  "Eisbergsalat",
+  "Fladenbrot (Pide)",
+  "Frischhaltefolie",
+  "Gabel (100er)",
+  "Getrocknete Tomaten",
+  "Gewürze: Gemüsebrühe",
+  "Gewürze: Majoran",
+  "Gewürze: Oregano",
+  "Gewürze: Pfeffer",
+  "Gewürze: Salz",
+  "Gewürze: Thymian",
+  "Gewürze: Zimt",
+  "Gewürze: Zucker (Braun)",
+  "Gewürzgurken",
+  "Granatapfelsirup",
+  "Gurke",
+  "Handschuhe (Weiss Kotton)",
+  "Handschuhe L",
+  "Handschuhe M",
+  "Handschuhe S",
+  "Handschuhe XL",
+  "Joghurt",
+  "Kartoffel (Würfel)",
+  "Käse: Gouda",
+  "Käse: Mozzarella",
+  "Kassenbon Rolle Gross",
+  "Kassenbon Rolle Klein",
+  "Kichererbsen Dose",
+  "Knoblauch",
+  "Linsen",
+  "Löffel (100er)",
+  "Mais",
+  "Mark: Paprikamark",
+  "Mark: Tomatenmark",
+  "Milchersatz (Hafer+Soja)",
+  "Minze",
+  "Möhren (Stifte)",
+  "Möhren (Würfel)",
+  "Mülltüte (35 Lt)",
+  "Mülltüte (60 Lt)",
+  "Oliven",
+  "Olivenöl",
+  "Pappbecher (Gross)",
+  "Pappbecher (Probe)",
+  "Paprikapulver (Scharf)",
+  "Paprikapulver (Süß)",
+  "Petersilie (Bund)",
+  "Petersilie (geschnitten)",
+  "Reis",
+  "Rotkohl",
+  "Rucola",
+  "Salate (2,5kg)",
+  "Salep Pulver (200gr)",
+  "Servietten",
+  "Spüllappen",
+  "Spülmittel",
+  "Sumach",
+  "Tabasco",
+  "Teller (Bowl Pleta)",
+  "Teller (Palmblatt Pleta)",
+  "Teller (Pappteller Bowl Mega)",
+  "Teller (Pappteller Klassik Mega)",
+  "Tomaten (Gehackt)",
+  "Tomaten (Stück)",
+  "Tork Tücher",
+  "Walnüsse",
+  "Wasser (1,5Lt)",
+  "Zitrone",
+  "Zitronensaft",
+  "Zwiebel (Ganz)",
+  "Zwiebel (Würfel)",
+  "Fertig: Gözleme Kartoffel",
+  "Fertig: Gözleme Spinat-Käse",
+  "Fertig: Klassik Fladenbrote",
+  "Fertig: Linsensuppe (1 leer bis 5 voll)",
+  "Fertig: Kichererbseneintopf (1 bis 5)",
+  "Fertig: Reis (1 bis 5)"
+];
+function buildWouData() {
+  return WOU_NAMES.map(name => ({ name, pack: '', menge: '', eisen: '' }));
+}
+
+// Tab-Schlüssel → Name des Tabellenblatts im Google Sheet
+const SHEET_NAMES = { truck: 'Food-Truck', lager: 'Lager', back: 'Back-Kitchen', bf: 'B&F', wou: 'Wouahou' };
+function tabData(tab) {
+  return tab === 'truck' ? truckData : tab === 'back' ? backData : tab === 'bf' ? bfData : tab === 'wou' ? wouData : lagerData;
+}
 let lagerData = JSON.parse(JSON.stringify(LAGER_DEFAULT));
 let tokenClient = null;
 let accessToken = null;
@@ -434,6 +535,9 @@ async function loadBothTabs() {
   ok.push(await loadTab('truck'));
   ok.push(await loadTab('back'));
   ok.push(await loadTab('bf'));
+  // Wouahou-Blatt anlegen, falls es im Sheet noch fehlt (sonst schlägt das Laden fehl und Speichern bliebe gesperrt)
+  await ensureSheet('Wouahou');
+  ok.push(await loadTab('wou'));
   render();
   if (ok.every(Boolean)) {
     dataLoaded = true;      // erst jetzt darf gespeichert werden
@@ -450,7 +554,7 @@ async function loadBothTabs() {
 
 async function loadTab(tab) {
   try {
-    const sheetName = tab === 'truck' ? 'Food-Truck' : (tab === 'back' ? 'Back-Kitchen' : (tab === 'bf' ? 'B&F' : 'Lager'));
+    const sheetName = SHEET_NAMES[tab];
     // Ab Zeile 1 (inkl. Kopfzeile) laden — so lässt sich erkennen, ob dieses Tabellenblatt
     // schon die neue "Eisenmenge"-Spalte hat oder noch die alte Struktur von vor dieser Funktion.
     const cols = tab === 'lager' ? 'A1:G500' : 'A1:E500';
@@ -467,7 +571,7 @@ async function loadTab(tab) {
     if (data.values && data.values.length > 1) {
       const header = data.values[0];
       const rows = data.values.slice(1);
-      if (tab === 'truck' || tab === 'back' || tab === 'bf') {
+      if (tab !== 'lager') {
         // Neu: Zutat, Verpackung, Menge, Eisenmenge, Archiviert (5 Spalten)
         // Alt (vor dieser Funktion): Zutat, Verpackung, Menge, Archiviert (4 Spalten, keine Eisenmenge)
         const hatEisenmenge = header[3] === 'Eisenmenge';
@@ -479,6 +583,7 @@ async function loadTab(tab) {
           .filter(r => { if (!r.name || seen.has(r.name)) return false; seen.add(r.name); return true; });
         if (tab === 'truck') truckData = parsed;
         else if (tab === 'back') backData = parsed;
+        else if (tab === 'wou') wouData = parsed;
         else bfData = parsed;
       } else {
         const hatEisenmenge = header[4] === 'Eisenmenge';
@@ -494,6 +599,7 @@ async function loadTab(tab) {
       if (tab === 'truck') truckData = buildTruckData(TRUCK_NAMES);
       if (tab === 'back') { backData = buildBackData(BACK_NAMES); await ensureSheet('Back-Kitchen'); }
       if (tab === 'bf') { bfData = buildBfData(); await ensureSheet('B&F'); }
+      if (tab === 'wou') wouData = buildWouData();
       await initSheet(tab);
     }
     return true;
@@ -514,7 +620,7 @@ async function ensureSheet(title) {
 }
 
 async function initSheet(tab) {
-  const sheetName = tab === 'truck' ? 'Food-Truck' : (tab === 'back' ? 'Back-Kitchen' : (tab === 'bf' ? 'B&F' : 'Lager'));
+  const sheetName = SHEET_NAMES[tab];
   let values;
   if (tab === 'truck') {
     values = [['Zutat','Verpackung','Menge','Eisenmenge','Archiviert'], ...truckData.map(r=>[r.name,r.pack||'',r.menge||'',r.eisen||'',r.archived?'ja':''])];
@@ -522,6 +628,8 @@ async function initSheet(tab) {
     values = [['Zutat','Verpackung','Menge','Eisenmenge','Archiviert'], ...backData.map(r=>[r.name,r.pack||'',r.menge||'',r.eisen||'',r.archived?'ja':''])];
   } else if (tab === 'bf') {
     values = [['Zutat','Verpackung','Menge','Eisenmenge','Archiviert'], ...bfData.map(r=>[r.name,r.pack||'',r.menge||'',r.eisen||'',r.archived?'ja':''])];
+  } else if (tab === 'wou') {
+    values = [['Zutat','Verpackung','Menge','Eisenmenge','Archiviert'], ...wouData.map(r=>[r.name,r.pack||'',r.menge||'',r.eisen||'',r.archived?'ja':''])];
   } else {
     values = [['Zutat','Vendor','Verpackung','Menge','Eisenmenge','Archiviert'], ...lagerData.map(r=>[r.name,r.vendor||'',r.pack||'',r.menge||'',r.eisen||'',r.archived?'ja':''])];
   }
@@ -545,6 +653,7 @@ async function saveToSheets(silent = false) {
     const sortedLager = [...lagerData].sort((a,b) => a.name.localeCompare(b.name, 'de'));
     const sortedBack = [...backData].sort((a,b) => a.name.localeCompare(b.name, 'de'));
     const sortedBf = [...bfData].sort((a,b) => a.name.localeCompare(b.name, 'de'));
+    const sortedWou = [...wouData].sort((a,b) => a.name.localeCompare(b.name, 'de'));
     const truckValues = [
       ['Zutat','Verpackung','Menge','Eisenmenge','Archiviert'],
       ...sortedTruck.map(r=>[r.name,r.pack||'',r.menge||'',r.eisen||'',r.archived?'ja':''])
@@ -561,11 +670,16 @@ async function saveToSheets(silent = false) {
       ['Zutat','Verpackung','Menge','Eisenmenge','Archiviert'],
       ...sortedBf.map(r=>[r.name,r.pack||'',r.menge||'',r.eisen||'',r.archived?'ja':''])
     ];
+    const wouValues = [
+      ['Zutat','Verpackung','Menge','Eisenmenge','Archiviert'],
+      ...sortedWou.map(r=>[r.name,r.pack||'',r.menge||'',r.eisen||'',r.archived?'ja':''])
+    ];
     await writeAllSheets([
       { sheet: 'Food-Truck',   values: truckValues },
       { sheet: 'Lager',        values: lagerValues },
       { sheet: 'Back-Kitchen', values: backValues },
-      { sheet: 'B&F',          values: bfValues }
+      { sheet: 'B&F',          values: bfValues },
+      { sheet: 'Wouahou',      values: wouValues }
     ]);
     if (!silent) showToast('✓ Gespeichert');
     updateLastSync();
@@ -649,6 +763,7 @@ function switchTab(tab) {
   document.getElementById('tab-lager').classList.toggle('active', tab==='lager');
   document.getElementById('tab-back').classList.toggle('active', tab==='back');
   document.getElementById('tab-bf').classList.toggle('active', tab==='bf');
+  document.getElementById('tab-wou').classList.toggle('active', tab==='wou');
   render();
 }
 
@@ -794,7 +909,7 @@ function archiveRow() {
 }
 
 function restoreRow(tab, name) {
-  const data = tab === 'truck' ? truckData : (tab === 'back' ? backData : (tab === 'bf' ? bfData : lagerData));
+  const data = tabData(tab);
   const row = data.find(r => r.name === name);
   if (!row) return;
   row.archived = false;
@@ -855,7 +970,7 @@ function renderArchive() {
   }).join('');
 }
 
-function getData() { return currentTab === 'truck' ? truckData : (currentTab === 'back' ? backData : (currentTab === 'bf' ? bfData : lagerData)); }
+function getData() { return tabData(currentTab); }
 function isLow(row) {
   if (!row.menge || !row.eisen) return false;
   const m = parseFloat(row.menge.replace(',','.')), e = parseFloat(row.eisen.replace(',','.'));
@@ -896,6 +1011,7 @@ function liveAktualisieren(i) {
     lager: lagerData.filter(r => isLow(r)).length,
     back: backData.filter(r => isLow(r)).length,
     bf: bfData.filter(r => isLow(r)).length,
+    wou: wouData.filter(r => isLow(r)).length,
   };
   Object.entries(badgeCounts).forEach(([tab, count]) => {
     const el = document.getElementById('badge-' + tab);
@@ -921,6 +1037,7 @@ function render() {
     lager: lagerData.filter(r => isLow(r)).length,
     back: backData.filter(r => isLow(r)).length,
     bf: bfData.filter(r => isLow(r)).length,
+    wou: wouData.filter(r => isLow(r)).length,
   };
   Object.entries(badgeCounts).forEach(([tab, count]) => {
     const el = document.getElementById('badge-' + tab);
@@ -1008,6 +1125,7 @@ function scheduleAutosave() {
 truckData = buildTruckData(TRUCK_NAMES);
 backData = buildBackData(BACK_NAMES);
 bfData = buildBfData();
+wouData = buildWouData();
 render();
 
 const gsi = document.createElement('script');
